@@ -505,6 +505,20 @@
 					<exclude>**/*.xml</exclude>
 				</excludes>
 			</resource>
+			<resource>
+				<directory>web/src/main/webapp/WEB-INF/jsp/login</directory>
+				<includes>
+					<include>**/login.jsp</include>
+				</includes>
+			</resource>
+
+			<resource>
+				<directory>src/main/webapp/WEB-INF/jsp/login</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*.jsp</include>
+				</includes>
+				</resource>
 		</resources>
 
 		<filters>
