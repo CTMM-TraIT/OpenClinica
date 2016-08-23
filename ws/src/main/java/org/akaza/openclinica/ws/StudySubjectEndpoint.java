@@ -217,6 +217,7 @@ public class StudySubjectEndpoint {
         for (StudySubjectBean studySubjectBean : studySubjects) {
             StudySubjectWithEventsType studySubjectType = new StudySubjectWithEventsType();
             SubjectType subjectType = new SubjectType();
+            studySubjectType.setOcOid(studySubjectBean.getOid());
             studySubjectType.setLabel(studySubjectBean.getLabel());
             studySubjectType.setSecondaryLabel(studySubjectBean.getSecondaryLabel());
             if ( studySubjectBean.getEnrollmentDate() != null){

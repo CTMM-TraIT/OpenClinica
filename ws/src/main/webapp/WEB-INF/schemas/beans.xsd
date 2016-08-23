@@ -67,6 +67,7 @@
     <complexType name="studySubjectWithEventsType">
         <sequence>
             <element name="label" type="beans:customStringType" minOccurs="0"/>
+            <element name="oc_oid" type="beans:customStringType" minOccurs="0"/>
             <element name="secondaryLabel" type="beans:customStringType" minOccurs="0"/>
             <element name="enrollmentDate" type="date"/>
             <element name="subject" type="beans:subjectType"/>
