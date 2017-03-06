@@ -33,7 +33,7 @@ body {
 #logoBar {
 	margin-left : auto;
 	margin-right: auto;
-	margin-top: -60px;
+	margin-top: -90px;
 	*margin-top: -20px;
 	text-align: center;
 	overflow: hidden;
@@ -71,6 +71,7 @@ body.login_BG {
 
 #imageTraITContainer {
 	padding-left: 145px;
+	margin-top: 30px;
 }
 
 
@@ -80,7 +81,7 @@ body.login_BG {
 	width: 420px;
 	text-align: left;
 	padding-left: 108px;
-	padding-top: 35px;
+	padding-top: 19px;
 }
 
 .welcomeTextOC {
