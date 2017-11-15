@@ -13,19 +13,23 @@ import java.util.Set;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.akaza.openclinica.bean.core.SubjectEventStatus;
 import org.akaza.openclinica.controller.openrosa.QueryService;
 import org.akaza.openclinica.controller.openrosa.SubmissionContainer;
 import org.akaza.openclinica.controller.openrosa.SubmissionContainer.FieldRequestTypeEnum;
 import org.akaza.openclinica.controller.openrosa.SubmissionProcessorChain.ProcessorEnum;
 import org.akaza.openclinica.dao.hibernate.CrfVersionDao;
+import org.akaza.openclinica.dao.hibernate.EventCrfDao;
 import org.akaza.openclinica.dao.hibernate.FormLayoutMediaDao;
 import org.akaza.openclinica.dao.hibernate.ItemDao;
 import org.akaza.openclinica.dao.hibernate.ItemDataDao;
 import org.akaza.openclinica.dao.hibernate.ItemFormMetadataDao;
 import org.akaza.openclinica.dao.hibernate.ItemGroupDao;
 import org.akaza.openclinica.dao.hibernate.ItemGroupMetadataDao;
+import org.akaza.openclinica.dao.hibernate.StudyEventDao;
 import org.akaza.openclinica.domain.Status;
 import org.akaza.openclinica.domain.datamap.CrfVersion;
+import org.akaza.openclinica.domain.datamap.EventCrf;
 import org.akaza.openclinica.domain.datamap.FormLayout;
 import org.akaza.openclinica.domain.datamap.FormLayoutMedia;
 import org.akaza.openclinica.domain.datamap.Item;
@@ -33,6 +37,7 @@ import org.akaza.openclinica.domain.datamap.ItemData;
 import org.akaza.openclinica.domain.datamap.ItemFormMetadata;
 import org.akaza.openclinica.domain.datamap.ItemGroup;
 import org.akaza.openclinica.domain.datamap.ItemGroupMetadata;
+import org.akaza.openclinica.domain.datamap.StudyEvent;
 import org.akaza.openclinica.domain.xform.XformParserHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +60,10 @@ public class FSItemProcessor extends AbstractItemProcessor implements Processor 
     private QueryService queryService;
     @Autowired
     private ItemDataDao itemDataDao;
+    @Autowired
+    private EventCrfDao eventCrfDao;
+    @Autowired
+    private StudyEventDao studyEventDao;
     @Autowired
     private ItemDao itemDao;
     @Autowired
@@ -161,6 +170,7 @@ public class FSItemProcessor extends AbstractItemProcessor implements Processor 
             for (ItemGroupMetadata ig : igms) {
                 ItemData existingItemData = itemDataDao.findByItemEventCrfOrdinal(ig.getItem().getItemId(), container.getEventCrf().getEventCrfId(),
                         itemOrdinal);
+                int maxRowCount = itemDataDao.getMaxCountByEventCrfGroup(container.getEventCrf().getEventCrfId(), ig.getItemGroup().getItemGroupId());
 
                 // ItemData existingItemData = lookupFieldItemData(itemGroup, itemOrdinal, container);
                 if (existingItemData != null) {
@@ -172,9 +182,16 @@ public class FSItemProcessor extends AbstractItemProcessor implements Processor 
                     existingItemData.setUpdateId(container.getUser().getUserId());
                     existingItemData.setInstanceId(container.getInstanceId());
                     existingItemData = itemDataDao.saveOrUpdate(existingItemData);
+                    updateEventSubjectStatusIfSigned(container);
+                    resetSdvStatus(container);
 
                     // Close discrepancy notes
                     closeItemDiscrepancyNotes(container, existingItemData);
+                } else if (itemOrdinal < maxRowCount) {
+                    ItemData newItemData = createItemData(ig.getItem(), "", itemOrdinal, container);
+                    newItemData.setDeleted(true);
+                    newItemData = itemDataDao.saveOrUpdate(newItemData);
+                    updateEventSubjectStatusIfSigned(container);
                 }
             }
             return;
@@ -192,61 +209,64 @@ public class FSItemProcessor extends AbstractItemProcessor implements Processor 
             itemValue = itemNode.getTextContent();
 
             item = itemDao.findByNameCrfId(itemNode.getNodeName(), crfVersion.getCrf().getCrfId());
-            if (item == null) {
+            if (item != null) {
+                ItemFormMetadata itemFormMetadata = itemFormMetadataDao.findByItemCrfVersion(item.getItemId(), crfVersion.getCrfVersionId());
+
+                // Convert space separated Enketo multiselect values to comma separated OC multiselect values
+                Integer responseTypeId = itemFormMetadata.getResponseSet().getResponseType().getResponseTypeId();
+                if (responseTypeId == 3 || responseTypeId == 7) {
+                    itemValue = itemValue.replaceAll(" ", ",");
+                }
+                if (responseTypeId == 4) {
+                    /*
+                     * for (HashMap uploadFilePath : listOfUploadFilePaths) {
+                     * if ((boolean) uploadFilePath.containsKey(itemValue) && itemValue != "") {
+                     * itemValue = (String) uploadFilePath.get(itemValue);
+                     * break;
+                     * }
+                     * }
+                     */ FormLayoutMedia media = formLayoutMediaDao.findByEventCrfIdAndFileName(container.getEventCrf().getEventCrfId(), itemValue);
+                    if (media == null) {
+                        media = new FormLayoutMedia();
+                    }
+                    media.setName(itemValue);
+                    media.setFormLayout(formLayout);
+                    media.setEventCrfId(container.getEventCrf().getEventCrfId());
+                    media.setPath("attached_files/" + container.getStudy().getOc_oid() + "/");
+
+                    formLayoutMediaDao.saveOrUpdate(media);
+                }
+
+                ItemData newItemData = createItemData(item, itemValue, itemOrdinal, container);
+                Errors itemErrors = validateItemData(newItemData, item, responseTypeId);
+                if (itemErrors.hasErrors()) {
+                    container.getErrors().addAllErrors(itemErrors);
+                    throw new Exception("Item validation error.  Rolling back submission changes.");
+                }
+
+                ItemData existingItemData = itemDataDao.findByItemEventCrfOrdinal(item.getItemId(), container.getEventCrf().getEventCrfId(), itemOrdinal);
+                if (existingItemData == null) {
+                    newItemData.setStatus(Status.UNAVAILABLE);
+                    itemDataDao.saveOrUpdate(newItemData);
+                    updateEventSubjectStatusIfSigned(container);
+                    resetSdvStatus(container);
+
+                } else if (existingItemData.getValue().equals(newItemData.getValue())) {
+
+                } else {
+                    // Existing item. Value changed. Update existing value.
+                    existingItemData.setInstanceId(container.getInstanceId());
+                    existingItemData.setValue(newItemData.getValue());
+                    existingItemData.setUpdateId(container.getUser().getUserId());
+                    existingItemData.setDateUpdated(new Date());
+                    itemDataDao.saveOrUpdate(existingItemData);
+                    updateEventSubjectStatusIfSigned(container);
+                    resetSdvStatus(container);
+                }
+            } else {
                 logger.error("Failed to lookup item: '" + itemName + "'.  Continuing with submission.");
             }
-
-            ItemFormMetadata itemFormMetadata = itemFormMetadataDao.findByItemCrfVersion(item.getItemId(), crfVersion.getCrfVersionId());
-
-            // Convert space separated Enketo multiselect values to comma separated OC multiselect values
-            Integer responseTypeId = itemFormMetadata.getResponseSet().getResponseType().getResponseTypeId();
-            if (responseTypeId == 3 || responseTypeId == 7) {
-                itemValue = itemValue.replaceAll(" ", ",");
-            }
-            if (responseTypeId == 4) {
-                /*
-                 * for (HashMap uploadFilePath : listOfUploadFilePaths) {
-                 * if ((boolean) uploadFilePath.containsKey(itemValue) && itemValue != "") {
-                 * itemValue = (String) uploadFilePath.get(itemValue);
-                 * break;
-                 * }
-                 * }
-                 */ FormLayoutMedia media = formLayoutMediaDao.findByEventCrfIdAndFileName(container.getEventCrf().getEventCrfId(), itemValue);
-                if (media == null) {
-                    media = new FormLayoutMedia();
-                }
-                media.setName(itemValue);
-                media.setFormLayout(formLayout);
-                media.setEventCrfId(container.getEventCrf().getEventCrfId());
-                media.setPath("/" + container.getStudy().getOc_oid() + "/");
-
-                formLayoutMediaDao.saveOrUpdate(media);
-            }
-
-            ItemData newItemData = createItemData(item, itemValue, itemOrdinal, container);
-            Errors itemErrors = validateItemData(newItemData, item, responseTypeId);
-            if (itemErrors.hasErrors()) {
-                container.getErrors().addAllErrors(itemErrors);
-                throw new Exception("Item validation error.  Rolling back submission changes.");
-            }
-
-            ItemData existingItemData = itemDataDao.findByItemEventCrfOrdinal(item.getItemId(), container.getEventCrf().getEventCrfId(), itemOrdinal);
-            if (existingItemData == null) {
-                newItemData.setStatus(Status.UNAVAILABLE);
-                itemDataDao.saveOrUpdate(newItemData);
-
-            } else if (existingItemData.getValue().equals(newItemData.getValue())) {
-
-            } else {
-                // Existing item. Value changed. Update existing value.
-                existingItemData.setInstanceId(container.getInstanceId());
-                existingItemData.setValue(newItemData.getValue());
-                existingItemData.setUpdateId(container.getUser().getUserId());
-                existingItemData.setDateUpdated(new Date());
-                itemDataDao.saveOrUpdate(existingItemData);
-            }
         }
-
     }
 
     private boolean shouldProcessItemNode(Node itemNode) {
@@ -257,6 +277,23 @@ public class FSItemProcessor extends AbstractItemProcessor implements Processor 
 
     private ItemData lookupFieldItemData(ItemGroup itemGroup, Integer ordinal, SubmissionContainer container) {
         return itemDataDao.findByEventCrfGroupOrdinal(container.getEventCrf(), itemGroup.getItemGroupId(), ordinal);
+    }
+
+    private void resetSdvStatus(SubmissionContainer container) {
+        EventCrf eventCrf = container.getEventCrf();
+        eventCrf.setSdvStatus(false);
+        eventCrf.setSdvUpdateId(container.getUser().getUserId());
+        eventCrfDao.saveOrUpdate(eventCrf);
+    }
+
+    private void updateEventSubjectStatusIfSigned(SubmissionContainer container) {
+        StudyEvent studyEvent = container.getEventCrf().getStudyEvent();
+        if (studyEvent.getSubjectEventStatusId() == SubjectEventStatus.SIGNED.getId()) {
+            studyEvent.setSubjectEventStatusId(SubjectEventStatus.DATA_ENTRY_STARTED.getId());
+            studyEvent.setUpdateId(container.getUser().getUserId());
+            studyEvent.setDateUpdated(new Date());
+            studyEventDao.saveOrUpdate(studyEvent);
+        }
     }
 
 }

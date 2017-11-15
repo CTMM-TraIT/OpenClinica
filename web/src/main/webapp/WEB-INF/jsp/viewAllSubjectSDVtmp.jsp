@@ -7,9 +7,7 @@
 <fmt:setBundle basename="org.akaza.openclinica.i18n.notes" var="restext"/>
 <fmt:setBundle basename="org.akaza.openclinica.i18n.page_messages" var="resmessages"/>
 
-
 <jsp:include page="include/managestudy_top_pages.jsp"/>
-
 
 <!-- move the alert message to the sidebar-->
 <jsp:include page="include/sideAlert.jsp"/>
@@ -17,9 +15,9 @@
 <tr id="sidebar_Instructions_open">
     <td class="sidebar_tab">
 
-        <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><img src="../images/sidebar_collapse.gif" border="0" align="right" hspace="10"></a>
+        <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><span class="icon icon-caret-down gray"></span></a>
 
-        <b><fmt:message key="instructions" bundle="${restext}"/></b>
+        <fmt:message key="instructions" bundle="${restext}"/>
 
         <div class="sidebar_tab_content">
 
@@ -33,9 +31,9 @@
 <tr id="sidebar_Instructions_closed" style="display: none">
     <td class="sidebar_tab">
 
-        <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><img src="../images/sidebar_expand.gif" border="0" align="right" hspace="10"></a>
+        <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><span class="icon icon-caret-right gray"></span></a>
 
-        <b><fmt:message key="instructions" bundle="${restext}"/></b>
+        <fmt:message key="instructions" bundle="${restext}"/>
 
     </td>
 </tr>
@@ -56,38 +54,55 @@
         var parameterString = createParameterStringForLimit(id);
         //location.href = '${pageContext.request.contextPath}/ViewCRF?module=manage&crfId=' + '${crf.id}&' + parameterString;
     }
-</script></div>
+</script>
+
+<c:if test="${(study.status.locked || study.status.frozen || study.status.pending)}">
+    <c:if test="${userBean.numVisitsToMainMenu<=1 || studyJustChanged=='yes'}">
+        <script type="text/javascript">
+            $(window).on('load', function () {
+                initmb();
+                sm('box', 730,100);
+            });
+        </script>
+    </c:if>
+</c:if>
+
+
+</div>
+
+<div id="box" class="dialog">
+    <span id="mbm">
+        <br>
+        <c:if test="${(!study.status.pending)}">
+            <fmt:message key="study_frozen_locked_note" bundle="${restext}"/>
+        </c:if>
+        
+        <c:if test="${(study.status.pending)}">
+            <fmt:message key="study_design_note" bundle="${restext}"/>
+        </c:if>   
+    </span><br>
+    <div style="text-align:center; width:100%;">
+        <button id="btn" onclick="hm('box');">OK</button>
+    </div>
+</div>
+
+<script type="text/javascript">
+    window.onload = function() {
+        document.getElementById("btn").focus();
+    };
+</script>
 
 <h1><span class="title_manage">
 <fmt:message key="sdv_sdv_for" bundle="${resword}"/> <c:out value="${study.name}"/>
     <a href="javascript:openDocWindow('https://docs.openclinica.com/3.1/openclinica-user-guide/monitor-and-manage-data')">
-        <img src="../images/bt_Help_Manage.gif" border="0" alt="<fmt:message key="help" bundle="${restext}"/>" title="<fmt:message key="help" bundle="${restext}"/>"></a>
-</span></h1>
+        <span class=""></span></a>
+</span></h1><br/>
 
 <jsp:useBean scope='session' id='sSdvRestore' class='java.lang.String' />
 <c:set var="restore" value="true"/>
 <c:if test="${sSdvRestore=='false'}"><c:set var="restore" value="false"/></c:if>
 
-<div id="searchFilterSDV">
-    <table border="0" cellpadding="0" cellspacing="0">
-        <tr>
-            <td valign="bottom" id="Tab1'">
-                <div id="Tab1NotSelected"><div class="tab_BG"><div class="tab_L"><div class="tab_R">
-                    <a class="tabtext" title="<fmt:message key="view_by_event_CRF" bundle="${resword}"/>" href='viewAllSubjectSDVtmp?studyId=${studyId}' onclick="javascript:HighlightTab(1);"><fmt:message key="view_by_event_CRF" bundle="${resword}"/></a></div></div></div></div>
-                <div id="Tab1Selected" style="display:none"><div class="tab_BG_h"><div class="tab_L_h"><div class="tab_R_h"><span class="tabtext"><fmt:message key="view_by_event_CRF" bundle="${resword}"/></span></div></div></div></div></td>
-              
-            <td valign="bottom" id="Tab2'">
-				<div id="Tab2Selected"><div class="tab_BG"><div class="tab_L"><div class="tab_R">
-                    <a class="tabtext" title="<fmt:message key="view_by_studysubjectID" bundle="${resword}"/>" href='viewSubjectAggregate?s_sdv_restore=${restore}&studyId=${studyId}' onclick="javascript:HighlightTab(2);"><fmt:message key="view_by_studysubjectID" bundle="${resword}"/></a></div></div></div></div>
-                <div id="Tab2NotSelected" style="display:none"><div class="tab_BG_h"><div class="tab_L_h"><div class="tab_R_h"><span class="tabtext"><fmt:message key="view_by_studysubjectID" bundle="${resword}"/></span></div></div></div></div></td>
-
-        </tr>
-    </table>
-    <script language="JavaScript">
-        HighlightTab(1);
-    </script>
-    </div>
-    <%--
+<%--
 <!-- These DIVs define shaded box borders -->
 <div id="startBox" class="box_T"><div class="box_L"><div class="box_R"><div class="box_B">
 <div class="box_TL"><div class="box_TR"><div class="box_BL"><div class="box_BR">
@@ -246,6 +261,4 @@
 </div>
 <%-- view all subjects ends here --%>
 
-
-
-<jsp:include page="include/footer.jsp"/>
+<link rel="stylesheet" href="../includes/css/icomoon-style.css">

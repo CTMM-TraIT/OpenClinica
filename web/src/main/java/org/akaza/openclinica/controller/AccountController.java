@@ -23,7 +23,7 @@ import org.akaza.openclinica.domain.technicaladmin.LoginStatus;
 import org.akaza.openclinica.domain.user.AuthoritiesBean;
 import org.akaza.openclinica.i18n.util.ResourceBundleProvider;
 import org.akaza.openclinica.service.pmanage.ParticipantPortalRegistrar;
-import org.apache.commons.dbcp.BasicDataSource;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,8 +60,8 @@ public class AccountController {
 	@Autowired
 	ServletContext context;
 
-	@Autowired
-	AuthenticationManager authenticationManager;
+	//@Autowired
+	//AuthenticationManager authenticationManager;
 
 	public static final String FORM_CONTEXT = "ecid";
 
@@ -112,7 +112,7 @@ public class AccountController {
 
 
 
-	@RequestMapping(value = "/login", method = RequestMethod.POST)
+/*	@RequestMapping(value = "/login", method = RequestMethod.POST)
 	public ResponseEntity<HashMap> getAccountByUserName(@RequestBody HashMap<String, String> requestMap) throws Exception {
 
 		System.out.println("I'm in getAccountByUserName");
@@ -153,7 +153,7 @@ public class AccountController {
 
 		}
 		return new ResponseEntity<HashMap>(userDTO, org.springframework.http.HttpStatus.OK);
-	}
+	}*/
 
 	/**
 	 * @api {get} /pages/accounts/study/:studyOid/crc/:crcUserName Retrieve a user account - crc

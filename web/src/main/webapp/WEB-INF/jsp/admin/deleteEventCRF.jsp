@@ -35,7 +35,6 @@
 <div class="textbox_center">
 <table border="0" cellpadding="0" cellspacing="0" width="100%">
   <tr valign="top"><td class="table_header_column"><fmt:message key="event_definition_name" bundle="${resword}"/>:</td><td class="table_cell"><c:out value="${event.studyEventDefinition.name}"/></td></tr>
-  <tr valign="top"><td class="table_header_column"><fmt:message key="location" bundle="${resword}"/>:</td><td class="table_cell"><c:out value="${event.location}"/></td></tr>
   <tr valign="top"><td class="table_header_column"><fmt:message key="visit" bundle="${resword}"/>:</td><td class="table_cell"><c:out value="${event.sampleOrdinal}"/></td></tr>
 
   <tr valign="top"><td class="table_header_column"><fmt:message key="date_started" bundle="${resword}"/>:</td><td class="table_cell"><fmt:formatDate value="${event.dateStarted}" pattern="${dteFormat}"/></td></tr>
@@ -129,16 +128,4 @@
     </c:otherwise>
    </c:choose>
 
-<c:choose>
-  <c:when test="${userBean.sysAdmin}">
-  <c:import url="../include/workflow.jsp">
-   <c:param name="module" value="admin"/>
-  </c:import>
- </c:when>
-  <c:otherwise>
-   <c:import url="../include/workflow.jsp">
-   <c:param name="module" value="manage"/>
-  </c:import>
-  </c:otherwise>
- </c:choose>
 <jsp:include page="../include/footer.jsp"/>

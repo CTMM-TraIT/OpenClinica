@@ -10,6 +10,7 @@
 <fmt:setBundle basename="org.akaza.openclinica.i18n.terms" var="resterm"/>
 <fmt:setBundle basename="org.akaza.openclinica.i18n.format" var="resformat"/>
 <c:set var="dteFormat"><fmt:message key="date_format_string" bundle="${resformat}"/></c:set>
+<link rel="stylesheet" href="includes/font-awesome-4.7.0/css/font-awesome.css">
 
 
 <c:choose>
@@ -54,9 +55,9 @@
 <tr id="sidebar_Instructions_open" style="display: none">
     <td class="sidebar_tab">
 
-        <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><img src="images/sidebar_collapse.gif" border="0" align="right" hspace="10"></a>
+        <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><span class="icon icon-caret-down gray"></span></a>
 
-        <b><fmt:message key="instructions" bundle="${restext}"/></b>
+        <fmt:message key="instructions" bundle="${restext}"/>
 
         <div class="sidebar_tab_content">
         </div>
@@ -67,9 +68,9 @@
 <tr id="sidebar_Instructions_closed" style="display: all">
     <td class="sidebar_tab">
 
-        <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><img src="images/sidebar_expand.gif" border="0" align="right" hspace="10"></a>
+        <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><span class="icon icon-caret-down gray"></span></a>
 
-        <b><fmt:message key="instructions" bundle="${restext}"/></b>
+        <fmt:message key="instructions" bundle="${restext}"/>
 
     </td>
 </tr>
@@ -126,7 +127,7 @@
     </td>
         <td align="right">
             <!-- <span style="font-size:11px"><a href="#"><img
-		    src="images/bt_View.gif" border="0" alt="<fmt:message key="view" bundle="${resword}"/>" title="<fmt:message key="view" bundle="${resword}"/>"></a>View Printable Record</div>-->
+            src="images/bt_View.gif" border="0" alt="<fmt:message key="view" bundle="${resword}"/>" title="<fmt:message key="view" bundle="${resword}"/>"></a>View Printable Record</div>-->
             </h1>
 
         </td></tr>
@@ -145,6 +146,7 @@
 <br><br>
 <form action="SignStudySubject" method="post">
     <input type="hidden" name="id" value="<c:out value="${studySub.id}"/>">
+    <input type="hidden" name="studyId" value="<c:out value="${studySub.studyId}"/>">
     <input type="hidden" name="action" value="confirm">
     <div style="width: 250px">
         <div class="box_T"><div class="box_L"><div class="box_R"><div class="box_B"><div class="box_TL"><div class="box_TR"><div class="box_BL"><div class="box_BR">
@@ -420,7 +422,7 @@
         </c:choose>
 
     </c:otherwise>
-</c:choose>	<%--<a name="events"><a href="javascript:leftnavExpand('subjectEvents');javascript:setImage('ExpandGroup2','images/bt_Expand.gif');"><img
+</c:choose> <%--<a name="events"><a href="javascript:leftnavExpand('subjectEvents');javascript:setImage('ExpandGroup2','images/bt_Expand.gif');"><img
   name="ExpandGroup2" src="images/bt_Collapse.gif" border="0"> <fmt:message key="events" bundle="${resword}"/></a></a></div>
 <div id="subjectEvents">
     <c:import url="../include/showTable.jsp"><c:param name="rowURL" value="showStudyEventRow.jsp" /></c:import>
@@ -440,9 +442,7 @@
             <th class="table_header_row">CRF Name</th>
             <th class="table_header_row">New</th>
             <th class="table_header_row">Updated</th>
-            <th class="table_header_row">Resolution Proposed</th>
             <th class="table_header_row">Closed</th>
-            <th class="table_header_row">Not Applicable</th>
             <th class="table_header_row">Actions</th>
         </thead>
         <tbody>
@@ -473,8 +473,7 @@
                                 <td class="table_cell">
                                     <c:set var="discNoteCount" value="${discNoteMap['New']}"/>
                                     <c:if test="${discNoteCount > 0}">
-                                        <img
-                                          name="icon_Note" src="images/icon_Note.gif" border="0"
+                                        <span class="fa fa-bubble-red" border="0"
                                           alt="<fmt:message key="Open" bundle="${resterm}"/>" title="<fmt:message key="Open" bundle="${resterm}"/>" align="left"/>
                                         (${discNoteCount})
                                         <c:set var="discNoteCount" value="${0}"/>
@@ -483,46 +482,24 @@
                                 <td class="table_cell">
                                     <c:set var="discNoteCount" value="${discNoteMap['Updated']}"/>
                                     <c:if test="${discNoteCount > 0}">
-                                        <img
-                                          name="icon_Note" src="images/icon_flagYellow.gif" border="0"
+                                        <span class="fa fa-bubble-orange" border="0"
                                           alt="<fmt:message key="Updated" bundle="${resterm}"/>" title="<fmt:message key="Updated" bundle="${resterm}"/>" align="left"/>
                                         (${discNoteCount})
                                         <c:set var="discNoteCount" value="${0}"/>
                                     </c:if>
                                 </td><%-- updated --%>
                                 <td class="table_cell">
-                                    <c:set var="discNoteCount" value="${discNoteMap['Resolution Proposed']}"/>
-                                    <c:if test="${discNoteCount > 0}">
-                                        <img
-                                          name="icon_Note" src="images/icon_flagGreen.gif" border="0"
-                                          alt="<fmt:message key="Resolved" bundle="${resterm}"/>" title="<fmt:message key="Resolved" bundle="${resterm}"/>" align="left"/>
-                                        (${discNoteCount})
-                                        <c:set var="discNoteCount" value="${0}"/>
-                                    </c:if>
-                                </td><%-- Resolution Proposed --%>
-                                <td class="table_cell">
                                     <c:set var="discNoteCount" value="${discNoteMap['Closed']}"/>
                                     <c:if test="${discNoteCount > 0}">
-                                        <img
-                                          name="icon_Note" src="images/icon_flagBlack.gif" border="0"
+                                        <span class="fa fa-bubble-white" border="0"
                                           alt="<fmt:message key="Closed" bundle="${resterm}"/>" title="<fmt:message key="Closed" bundle="${resterm}"/>" align="left"/>
                                         (${discNoteCount})
                                         <c:set var="discNoteCount" value="${0}"/>
                                     </c:if>
                                 </td><%-- closed --%>
                                 <td class="table_cell">
-                                    <c:set var="discNoteCount" value="${discNoteMap['Not Applicable']}"/>
-                                    <c:if test="${discNoteCount > 0}">
-                                        <img
-                                          name="icon_Note" src="images/icon_flagWhite.gif" border="0"
-                                          alt="<fmt:message key="Not_Applicable" bundle="${resterm}"/>" title="<fmt:message key="Not_Applicable" bundle="${resterm}"/>" align="left"/>
-                                        (${discNoteCount})
-                                        <c:set var="discNoteCount" value="${0}"/>
-                                    </c:if>
-                                </td><%-- N/A --%>
-                                <td class="table_cell">
                                     <a onmouseup="javascript:setImage('bt_View1','images/bt_View.gif');" onmousedown="javascript:setImage('bt_View1','images/bt_View_d.gif');" href="EnterDataForStudyEvent?eventId=${displayStudyEventBean.studyEvent.id}">
-                                        <img hspace="6" border="0" align="left" title="View" alt="View" src="images/bt_View.gif" name="bt_View1"/>
+                                        <span hspace="6" border="0" align="left" title="View" alt="View" class="icon icon-search" name="bt_View1"/>
                                     </a>
                                 </td>
                             </tr>
@@ -663,7 +640,7 @@
     </c:choose>
 
     </c:otherwise>
-    </c:choose>	<a name="global"><a href="javascript:leftnavExpand('globalRecord');javascript:setImage('ExpandGroup5','images/bt_Collapse.gif');"><img
+    </c:choose> <a name="global"><a href="javascript:leftnavExpand('globalRecord');javascript:setImage('ExpandGroup5','images/bt_Collapse.gif');"><img
   name="ExpandGroup5" src="images/bt_Expand.gif" border="0"> <fmt:message key="global_subject_record" bundle="${resword}"/></a></a></div>
 
 <div id="globalRecord" style="display:none">
@@ -806,10 +783,5 @@
 
 
 <!-- End Main Content Area -->
-
-
-<c:import url="../include/workflow.jsp">
-    <c:param name="module" value="manage"/>
-</c:import>
 
 <jsp:include page="../include/footer.jsp"/>

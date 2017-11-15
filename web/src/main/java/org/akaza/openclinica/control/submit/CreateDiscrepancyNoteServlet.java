@@ -19,7 +19,6 @@ import javax.servlet.http.HttpSession;
 
 import org.akaza.openclinica.bean.admin.CRFBean;
 import org.akaza.openclinica.bean.core.DiscrepancyNoteType;
-import org.akaza.openclinica.bean.core.NumericComparisonOperator;
 import org.akaza.openclinica.bean.core.ResolutionStatus;
 import org.akaza.openclinica.bean.core.Role;
 import org.akaza.openclinica.bean.core.Status;
@@ -43,6 +42,7 @@ import org.akaza.openclinica.control.form.Validator;
 import org.akaza.openclinica.core.EmailEngine;
 import org.akaza.openclinica.core.form.StringUtil;
 import org.akaza.openclinica.dao.admin.CRFDAO;
+import org.akaza.openclinica.dao.core.CoreResources;
 import org.akaza.openclinica.dao.login.UserAccountDAO;
 import org.akaza.openclinica.dao.managestudy.DiscrepancyNoteDAO;
 import org.akaza.openclinica.dao.managestudy.StudyDAO;
@@ -594,21 +594,21 @@ public class CreateDiscrepancyNoteServlet extends SecureController {
             
 
             Validator v = new Validator(request);
-            String description = fp.getString("description");
+            //String description = fp.getString("description");
             int typeId = fp.getInt("typeId");
             int assignedUserAccountId = fp.getInt(SUBMITTED_USER_ACCOUNT_ID);
             int resStatusId = fp.getInt(RES_STATUS_ID);
             String detailedDes = fp.getString("detailedDes");
             int sectionId = fp.getInt("sectionId");
             DiscrepancyNoteBean note = new DiscrepancyNoteBean();
-            v.addValidation("description", Validator.NO_BLANKS);
-            v.addValidation("description", Validator.LENGTH_NUMERIC_COMPARISON, NumericComparisonOperator.LESS_THAN_OR_EQUAL_TO, 255);
-            v.addValidation("detailedDes", Validator.LENGTH_NUMERIC_COMPARISON, NumericComparisonOperator.LESS_THAN_OR_EQUAL_TO, 1000);
+            v.addValidation("detailedDes", Validator.NO_BLANKS);
+            // v.addValidation("description", Validator.LENGTH_NUMERIC_COMPARISON, NumericComparisonOperator.LESS_THAN_OR_EQUAL_TO, 255);
+            // v.addValidation("detailedDes", Validator.LENGTH_NUMERIC_COMPARISON, NumericComparisonOperator.LESS_THAN_OR_EQUAL_TO, 1000);
 
             v.addValidation("typeId", Validator.NO_BLANKS);
 
             HashMap errors = v.validate();
-            note.setDescription(description);
+            //note.setDescription(description);
             note.setDetailedNotes(detailedDes);
             note.setOwner(ub);
             note.setOwnerId(ub.getId());
@@ -737,8 +737,15 @@ public class CreateDiscrepancyNoteServlet extends SecureController {
                         }
 
                     }
-                    note = (DiscrepancyNoteBean) dndao.create(note);
+                    String entityName ="";
+                    if (!StringUtils.isBlank(note.getEntityType()) && !"itemData".equalsIgnoreCase(note.getEntityType())
+                            && !StringUtils.isBlank((String)request.getAttribute("entityName"))) {
+                            entityName = (String)request.getAttribute("entityName");
+                    } else {
+                        entityName=note.getEntityName();
+                    }
 
+                    note = (DiscrepancyNoteBean) dndao.create(note);
                     dndao.createMapping(note);
 
                     request.setAttribute(DIS_NOTE, note);
@@ -806,7 +813,7 @@ public class CreateDiscrepancyNoteServlet extends SecureController {
                         message.append(respage.getString("email_body_separator"));
                         message.append(respage.getString("disc_note_info"));
                         message.append(respage.getString("email_body_separator"));
-                        message.append(MessageFormat.format(respage.getString("mailDNParameters1"), note.getDescription(), note.getDetailedNotes(), ub.getName()));
+                        message.append(MessageFormat.format(respage.getString("mailDNParameters1"), note.getDetailedNotes(), ub.getName()));
                         message.append(respage.getString("email_body_separator"));
                         message.append(respage.getString("entity_information"));
                         message.append(respage.getString("email_body_separator"));
@@ -834,7 +841,7 @@ public class CreateDiscrepancyNoteServlet extends SecureController {
                         message.append(respage.getString("email_footer"));
 
                         String emailBodyString = message.toString();
-                        sendEmail(alertEmail.trim(), EmailEngine.getAdminEmail(), MessageFormat.format(respage.getString("mailDNSubject"),study.getName(), note.getEntityName()), emailBodyString, true, null,
+                        sendEmail(alertEmail.trim(), EmailEngine.getAdminEmail(), MessageFormat.format(respage.getString("mailDNSubject"),study.getName(), entityName), emailBodyString, true, null,
                                 null, true);
 
                     } else {
@@ -940,6 +947,9 @@ public class CreateDiscrepancyNoteServlet extends SecureController {
     }
 
     private ArrayList generateUserAccounts(int studyId, int subjectId) {
+        String currentSchema = CoreResources.getRequestSchema(request);
+        CoreResources.setRequestSchema(request, "public");
+
         UserAccountDAO userAccountDAO = new UserAccountDAO(sm.getDataSource());
         StudyDAO studyDAO = new StudyDAO(sm.getDataSource());
         StudyBean subjectStudy = studyDAO.findByStudySubjectId(subjectId);
@@ -952,6 +962,9 @@ public class CreateDiscrepancyNoteServlet extends SecureController {
         } else {
             userAccounts = userAccountDAO.findAllUsersByStudyOrSite(studyId, 0, subjectId);
         }
+        CoreResources.setRequestSchema(request,currentSchema);
+
+        
         return userAccounts;
     }
 

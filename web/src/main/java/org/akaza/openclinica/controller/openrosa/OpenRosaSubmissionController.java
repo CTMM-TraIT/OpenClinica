@@ -11,7 +11,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.akaza.openclinica.bean.core.Status;
 import org.akaza.openclinica.bean.managestudy.StudySubjectBean;
 import org.akaza.openclinica.bean.rule.FileProperties;
 import org.akaza.openclinica.dao.core.CoreResources;
@@ -29,6 +28,7 @@ import org.akaza.openclinica.dao.hibernate.StudyEventDefinitionDao;
 import org.akaza.openclinica.dao.hibernate.StudyParameterValueDao;
 import org.akaza.openclinica.dao.hibernate.StudySubjectDao;
 import org.akaza.openclinica.dao.hibernate.UserAccountDao;
+import org.akaza.openclinica.domain.Status;
 import org.akaza.openclinica.domain.datamap.CrfVersion;
 import org.akaza.openclinica.domain.datamap.EventCrf;
 import org.akaza.openclinica.domain.datamap.EventDefinitionCrf;
@@ -38,13 +38,11 @@ import org.akaza.openclinica.domain.datamap.ItemData;
 import org.akaza.openclinica.domain.datamap.Study;
 import org.akaza.openclinica.domain.datamap.StudyEvent;
 import org.akaza.openclinica.domain.datamap.StudyEventDefinition;
-import org.akaza.openclinica.domain.datamap.StudyParameterValue;
 import org.akaza.openclinica.domain.datamap.StudySubject;
 import org.akaza.openclinica.domain.datamap.SubjectEventStatus;
 import org.akaza.openclinica.domain.user.UserAccount;
 import org.akaza.openclinica.exception.OpenClinicaSystemException;
 import org.akaza.openclinica.i18n.core.LocaleResolver;
-import org.akaza.openclinica.service.pmanage.ParticipantPortalRegistrar;
 import org.akaza.openclinica.web.pform.PFormCache;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -144,6 +142,8 @@ public class OpenRosaSubmissionController {
 
         DataBinder dataBinder = new DataBinder(null);
         Errors errors = dataBinder.getBindingResult();
+        Study parentStudy = studyDao.findByOcOID(studyOID);
+        request.setAttribute("requestSchema", parentStudy.getSchemaName());
         Study study = studyDao.findByOcOID(studyOID);
         String requestBody = null;
 
@@ -227,6 +227,9 @@ public class OpenRosaSubmissionController {
         int studyEventOrdinal = Integer.valueOf(subjectContext.get("studyEventOrdinal"));
 
         UserAccount userAccount = userAccountDao.findById(userAccountID);
+        Study parentStudy = studyDao.findByOcOID(studyOID);
+        request.setAttribute("requestSchema", parentStudy.getSchemaName());
+
         StudySubject studySubject = studySubjectDao.findByOcOID(studySubjectOID);
         Study study = studyDao.findByOcOID(studyOID);
         StudyEventDefinition sed = studyEventDefinitionDao.findById(studyEventDefinitionID);
@@ -304,6 +307,8 @@ public class OpenRosaSubmissionController {
 
         DataBinder dataBinder = new DataBinder(null);
         Errors errors = dataBinder.getBindingResult();
+        Study publicStudy = studyDao.findByOcOID(studyOID);
+        request.setAttribute("requestSchema", publicStudy.getSchemaName());
         Study study = studyDao.findByOcOID(studyOID);
         String requestBody = null;
         String instanceId = null;
@@ -316,29 +321,27 @@ public class OpenRosaSubmissionController {
                 logger.info("Field Submissions to the study not allowed.  Aborting field submission.");
                 return new ResponseEntity<String>(HttpStatus.NOT_ACCEPTABLE);
             }
-            if (ServletFileUpload.isMultipartContent(request)) {
-                String dir = getAttachedFilePath(studyOID);
-                FileProperties fileProperties = new FileProperties();
-                DiskFileItemFactory factory = new DiskFileItemFactory();
-                ServletFileUpload upload = new ServletFileUpload(factory);
-                upload.setFileSizeMax(fileProperties.getFileSizeMax());
-                List<FileItem> items = upload.parseRequest(request);
-                for (FileItem item : items) {
-                    if (item.getFieldName().equals("instance_id")) {
-                        instanceId = item.getString();
-                    } else if (item.getFieldName().equals("xml_submission_fragment_file")) {
-                        requestBody = item.getString("UTF-8");
-                    } else if (item.getContentType() != null) {
-                        if (!new File(dir).exists())
-                            new File(dir).mkdirs();
+            String dir = getAttachedFilePath(studyOID);
+            FileProperties fileProperties = new FileProperties();
+            DiskFileItemFactory factory = new DiskFileItemFactory();
+            ServletFileUpload upload = new ServletFileUpload(factory);
+            upload.setFileSizeMax(fileProperties.getFileSizeMax());
+            List<FileItem> items = upload.parseRequest(request);
+            for (FileItem item : items) {
+                if (item.getFieldName().equals("instance_id")) {
+                    instanceId = item.getString();
+                } else if (item.getFieldName().equals("xml_submission_fragment_file")) {
+                    requestBody = item.getString("UTF-8");
+                } else if (item.getContentType() != null) {
+                    if (!new File(dir).exists())
+                        new File(dir).mkdirs();
 
-                        File file = processUploadedFile(item, dir);
-                        map.put(item.getFieldName(), file.getPath());
+                    File file = processUploadedFile(item, dir);
+                    map.put(item.getFieldName(), file.getPath());
 
-                    }
                 }
-                listOfUploadFilePaths.add(map);
             }
+            listOfUploadFilePaths.add(map);
             if (instanceId == null) {
                 logger.info("Field Submissions to the study not allowed without a valid instanceId.  Aborting field submission.");
                 return new ResponseEntity<String>(HttpStatus.NOT_ACCEPTABLE);
@@ -400,6 +403,8 @@ public class OpenRosaSubmissionController {
 
         DataBinder dataBinder = new DataBinder(null);
         Errors errors = dataBinder.getBindingResult();
+        Study publicStudy = studyDao.findByOcOID(studyOID);
+        request.setAttribute("requestSchema", publicStudy.getSchemaName());
         Study study = studyDao.findByOcOID(studyOID);
         String requestBody = null;
         String instanceId = null;
@@ -499,30 +504,18 @@ public class OpenRosaSubmissionController {
 
     private boolean mayProceed(Study childStudy, StudySubjectBean ssBean) throws Exception {
         boolean accessPermission = false;
-        ParticipantPortalRegistrar participantPortalRegistrar = new ParticipantPortalRegistrar();
         Study study = getParentStudy(childStudy);
-        StudyParameterValue pStatus = studyParameterValueDao.findByStudyIdParameter(study.getStudyId(), "participantPortal");
-
-        // ACTIVE, PENDING, or INACTIVE
-        String pManageStatus = participantPortalRegistrar.getRegistrationStatus(childStudy.getOc_oid()).toString();
-
-        // enabled or disabled
-        String participateStatus = pStatus.getValue().toString();
 
         // available, pending, frozen, or locked
         String studyStatus = study.getStatus().getName().toString();
 
         if (ssBean == null) {
-            logger.info("pManageStatus: " + pManageStatus + "  participantStatus: " + participateStatus + "   studyStatus: " + studyStatus);
-            if (participateStatus.equalsIgnoreCase("enabled") && studyStatus.equalsIgnoreCase("available") && pManageStatus.equalsIgnoreCase("ACTIVE"))
+            logger.debug("studyStatus: " + studyStatus);
+            if (study.getStatus() == Status.AVAILABLE || study.getStatus() == Status.FROZEN)
                 accessPermission = true;
         } else {
-            logger.info("pManageStatus: " + pManageStatus + "  participantStatus: " + participateStatus + "   studyStatus: " + studyStatus
-                    + "  studySubjectStatus: " + ssBean.getStatus().getName());
-            // TODO: Disabled pManage status check for OC16 conference. Re-enable after.
-            // if (participateStatus.equalsIgnoreCase("enabled") && studyStatus.equalsIgnoreCase("available") &&
-            // pManageStatus.equalsIgnoreCase("ACTIVE")
-            if (participateStatus.equalsIgnoreCase("enabled") && studyStatus.equalsIgnoreCase("available") && ssBean.getStatus() == Status.AVAILABLE)
+            logger.info("studyStatus: " + studyStatus + "  studySubjectStatus: " + ssBean.getStatus().getName());
+            if (study.getStatus() == Status.AVAILABLE && ssBean.getStatus() == org.akaza.openclinica.bean.core.Status.AVAILABLE)
                 accessPermission = true;
         }
         return accessPermission;

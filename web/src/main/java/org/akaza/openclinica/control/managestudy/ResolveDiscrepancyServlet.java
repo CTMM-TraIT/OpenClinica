@@ -9,26 +9,40 @@
  */
 package org.akaza.openclinica.control.managestudy;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.sql.DataSource;
 
+import org.akaza.openclinica.bean.admin.CRFBean;
 import org.akaza.openclinica.bean.core.DiscrepancyNoteType;
 import org.akaza.openclinica.bean.core.ResolutionStatus;
 import org.akaza.openclinica.bean.core.Role;
 import org.akaza.openclinica.bean.core.Status;
+import org.akaza.openclinica.bean.core.Utils;
+import org.akaza.openclinica.bean.login.StudyUserRoleBean;
 import org.akaza.openclinica.bean.managestudy.DiscrepancyNoteBean;
 import org.akaza.openclinica.bean.managestudy.StudyBean;
 import org.akaza.openclinica.bean.managestudy.StudyEventBean;
+import org.akaza.openclinica.bean.managestudy.StudyEventDefinitionBean;
 import org.akaza.openclinica.bean.managestudy.StudySubjectBean;
 import org.akaza.openclinica.bean.submit.EventCRFBean;
 import org.akaza.openclinica.bean.submit.FormLayoutBean;
+import org.akaza.openclinica.bean.submit.ItemBean;
 import org.akaza.openclinica.bean.submit.ItemDataBean;
 import org.akaza.openclinica.bean.submit.ItemFormMetadataBean;
+import org.akaza.openclinica.bean.submit.ItemGroupBean;
+import org.akaza.openclinica.bean.submit.ItemGroupMetadataBean;
 import org.akaza.openclinica.control.SpringServletAccess;
 import org.akaza.openclinica.control.core.SecureController;
 import org.akaza.openclinica.control.form.FormProcessor;
@@ -36,13 +50,42 @@ import org.akaza.openclinica.control.submit.CreateDiscrepancyNoteServlet;
 import org.akaza.openclinica.control.submit.EnketoFormServlet;
 import org.akaza.openclinica.control.submit.EnterDataForStudyEventServlet;
 import org.akaza.openclinica.control.submit.TableOfContentsServlet;
+import org.akaza.openclinica.dao.admin.CRFDAO;
+import org.akaza.openclinica.dao.hibernate.VersioningMapDao;
 import org.akaza.openclinica.dao.managestudy.DiscrepancyNoteDAO;
+import org.akaza.openclinica.dao.managestudy.StudyDAO;
 import org.akaza.openclinica.dao.managestudy.StudyEventDAO;
+import org.akaza.openclinica.dao.managestudy.StudyEventDefinitionDAO;
 import org.akaza.openclinica.dao.managestudy.StudySubjectDAO;
 import org.akaza.openclinica.dao.submit.EventCRFDAO;
 import org.akaza.openclinica.dao.submit.FormLayoutDAO;
+import org.akaza.openclinica.dao.submit.ItemDAO;
 import org.akaza.openclinica.dao.submit.ItemDataDAO;
 import org.akaza.openclinica.dao.submit.ItemFormMetadataDAO;
+import org.akaza.openclinica.dao.submit.ItemGroupDAO;
+import org.akaza.openclinica.dao.submit.ItemGroupMetadataDAO;
+import org.akaza.openclinica.domain.datamap.VersioningMap;
+import org.akaza.openclinica.domain.xform.XformParser;
+import org.akaza.openclinica.domain.xform.dto.Bind;
+import org.akaza.openclinica.domain.xform.dto.Body;
+import org.akaza.openclinica.domain.xform.dto.Form;
+import org.akaza.openclinica.domain.xform.dto.Group;
+import org.akaza.openclinica.domain.xform.dto.Head;
+import org.akaza.openclinica.domain.xform.dto.Html;
+import org.akaza.openclinica.domain.xform.dto.Instance;
+import org.akaza.openclinica.domain.xform.dto.Item;
+import org.akaza.openclinica.domain.xform.dto.ItemSet;
+import org.akaza.openclinica.domain.xform.dto.Itext;
+import org.akaza.openclinica.domain.xform.dto.Label;
+import org.akaza.openclinica.domain.xform.dto.Meta;
+import org.akaza.openclinica.domain.xform.dto.Model;
+import org.akaza.openclinica.domain.xform.dto.Repeat;
+import org.akaza.openclinica.domain.xform.dto.RootItem;
+import org.akaza.openclinica.domain.xform.dto.Select;
+import org.akaza.openclinica.domain.xform.dto.Select1;
+import org.akaza.openclinica.domain.xform.dto.Text;
+import org.akaza.openclinica.domain.xform.dto.Translation;
+import org.akaza.openclinica.domain.xform.dto.UserControl;
 import org.akaza.openclinica.service.DiscrepancyNoteUtil;
 import org.akaza.openclinica.service.crfdata.EnketoUrlService;
 import org.akaza.openclinica.service.crfdata.xform.PFormCacheSubjectContextEntry;
@@ -62,11 +105,19 @@ public class ResolveDiscrepancyServlet extends SecureController {
     private static final String INPUT_NOTE_ID = "noteId";
     private static final String CAN_ADMIN_EDIT = "canAdminEdit";
     private static final String EVENT_CRF_ID = "ecId";
-    private static final String STUDY_SUB_ID = "studySubjectId";
+    public static final String ORIGINATING_PAGE = "originatingPage";
+    public static final String STUDYSUBJECTID = "studySubjectId";
 
     private static final String RESOLVING_NOTE = "resolving_note";
     private static final String RETURN_FROM_PROCESS_REQUEST = "returnFromProcess";
+    private static final String FLAVOR = "flavor";
     private static final String QUERY_FLAVOR = "-query";
+    public static final String SINGLE_ITEM_FLAVOR = "-single_item";
+    private static final String COMMENT = "_comment";
+    public static final String QUERY_SUFFIX = "form-queries.xml";
+    public static final String FS_QUERY_ATTRIBUTE = "oc:queryParent";
+    public static final String VIEW_MODE = "view";
+    public static final String EDIT_MODE = "edit";
 
     public Page getPageForForwarding(DiscrepancyNoteBean note, boolean isCompleted) {
         String entityType = note.getEntityType().toLowerCase();
@@ -74,7 +125,7 @@ public class ResolveDiscrepancyServlet extends SecureController {
 
         if ("subject".equalsIgnoreCase(entityType)) {
             if (ub.isSysAdmin() || ub.isTechAdmin()) {
-                return Page.UPDATE_SUBJECT_SERVLET;
+                return Page.UPDATE_STUDY_SUBJECT_SERVLET;
             } else {
                 return Page.VIEW_STUDY_SUBJECT_SERVLET;
             }
@@ -100,8 +151,8 @@ public class ResolveDiscrepancyServlet extends SecureController {
         return null;
     }
 
-    public boolean prepareRequestForResolution(HttpServletRequest request, DataSource ds, StudyBean currentStudy, DiscrepancyNoteBean note, boolean isCompleted)
-            throws Exception {
+    public boolean prepareRequestForResolution(HttpServletRequest request, DataSource ds, StudyBean currentStudy, DiscrepancyNoteBean note, boolean isCompleted,
+            String module, String flavor) throws Exception {
         String entityType = note.getEntityType().toLowerCase();
         int id = note.getEntityId();
         if ("subject".equalsIgnoreCase(entityType)) {
@@ -137,47 +188,175 @@ public class ResolveDiscrepancyServlet extends SecureController {
         // this is for item data
         else if ("itemdata".equalsIgnoreCase(entityType)) {
             ItemDataDAO iddao = new ItemDataDAO(ds);
+            ItemDAO idao = new ItemDAO(ds);
             ItemDataBean idb = (ItemDataBean) iddao.findByPK(id);
+            ItemBean item = (ItemBean) idao.findByPK(idb.getItemId());
+            ItemGroupMetadataDAO igmdao = new ItemGroupMetadataDAO<>(ds);
 
             EventCRFDAO ecdao = new EventCRFDAO(ds);
             EventCRFBean ecb = (EventCRFBean) ecdao.findByPK(idb.getEventCRFId());
 
             FormLayoutDAO fldao = new FormLayoutDAO(ds);
             FormLayoutBean formLayout = (FormLayoutBean) fldao.findByPK(ecb.getFormLayoutId());
+            CRFDAO cdao = new CRFDAO(ds);
+            CRFBean crf = cdao.findByLayoutId(formLayout.getId());
 
             StudyEventDAO sedao = new StudyEventDAO(ds);
+            StudyEventDefinitionDAO seddao = new StudyEventDefinitionDAO(ds);
 
             StudySubjectDAO ssdao = new StudySubjectDAO(sm.getDataSource());
             StudySubjectBean ssb = (StudySubjectBean) ssdao.findByPK(ecb.getStudySubjectId());
 
             ItemFormMetadataDAO ifmdao = new ItemFormMetadataDAO(ds);
-            ItemFormMetadataBean ifmb = ifmdao.findByItemIdAndCRFVersionId(idb.getItemId(), ecb.getFormLayoutId());
+            ItemFormMetadataBean ifmb = ifmdao.findByItemIdAndFormLayoutId(idb.getItemId(), ecb.getFormLayoutId());
+
+            ItemGroupMetadataBean igmBean = (ItemGroupMetadataBean) igmdao.findByItemAndCrfVersion(idb.getItemId(), ecb.getCRFVersionId());
+            ItemGroupDAO igdao = new ItemGroupDAO<>(ds);
+            ItemGroupBean igBean = (ItemGroupBean) igdao.findByPK(igmBean.getItemGroupId());
+            int repeatOrdinal = idb.getOrdinal();
+            ItemDataBean idata = null;
+            if (igmBean.isRepeatingGroup() && repeatOrdinal > 1) {
+                if (idb.isDeleted()) {
+                    repeatOrdinal = 0;
+                } else {
+                    List<ItemGroupMetadataBean> igms = igmdao.findMetaByGroupAndCrfVersion(igBean.getId(), ecb.getCRFVersionId());
+
+                    for (int i = 0; i < idb.getOrdinal(); i++) {
+                        for (ItemGroupMetadataBean igm : igms) {
+                            idata = iddao.findByItemIdAndEventCRFIdAndOrdinal(igm.getItemId(), ecb.getId(), i + 1);
+                            if (idata != null && idata.isDeleted()) {
+                                repeatOrdinal--;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
 
             EnketoUrlService enketoUrlService = (EnketoUrlService) SpringServletAccess.getApplicationContext(context).getBean("enketoUrlService");
+            XformParser xformParser = (XformParser) SpringServletAccess.getApplicationContext(context).getBean("xformParser");
+            VersioningMapDao versioningMapDao = (VersioningMapDao) SpringServletAccess.getApplicationContext(context).getBean("versioningMapDao");
             StudyEventBean seb = (StudyEventBean) sedao.findByPK(ecb.getStudyEventId());
-
+            StudyEventDefinitionBean sed = (StudyEventDefinitionBean) seddao.findByPK(seb.getStudyEventDefinitionId());
             // Cache the subject context for use during xform submission
             PFormCache cache = PFormCache.getInstance(context);
             PFormCacheSubjectContextEntry subjectContext = new PFormCacheSubjectContextEntry();
             subjectContext.setStudySubjectOid(ssb.getOid());
-            subjectContext.setStudyEventDefinitionId(seb.getStudyEventDefinitionId());
-            subjectContext.setOrdinal(seb.getSampleOrdinal());
+            subjectContext.setStudyEventDefinitionId(String.valueOf(seb.getStudyEventDefinitionId()));
+            subjectContext.setOrdinal(String.valueOf(seb.getSampleOrdinal()));
             subjectContext.setFormLayoutOid(formLayout.getOid());
-            subjectContext.setUserAccountId(ub.getId());
+            subjectContext.setUserAccountId(String.valueOf(ub.getId()));
+            subjectContext.setItemName(item.getName() + COMMENT);
+            subjectContext.setItemRepeatOrdinalAdjusted(repeatOrdinal);
+            subjectContext.setItemRepeatOrdinalOriginal(idb.getOrdinal());
+            subjectContext.setItemInRepeatingGroup(igmBean.isRepeatingGroup());
+            subjectContext.setItemRepeatGroupName(igBean.getLayoutGroupPath());
+            subjectContext.setStudyEventId(String.valueOf(seb.getId()));
             String contextHash = cache.putSubjectContext(subjectContext);
+            StudyBean parentStudyBean = getParentStudy(currentStudy.getOid(), ds);
+            context.setAttribute("SS_OID", ssb.getOid());
+
+            if (flavor.equals(SINGLE_ITEM_FLAVOR)) {
+                // This section is for version migration ,where item does not exist in the current formLayout
+                boolean itemExistInFormLayout = false;
+                List<VersioningMap> vms = versioningMapDao.findByVersionIdAndItemId(ecb.getCRFVersionId(), item.getId());
+                for (VersioningMap vm : vms) {
+                    if (vm.getFormLayout().getFormLayoutId() == formLayout.getId()) {
+                        itemExistInFormLayout = true;
+                        break;
+                    }
+                }
+                if (!itemExistInFormLayout)
+                    formLayout = (FormLayoutBean) fldao.findByPK(vms.get(0).getFormLayout().getFormLayoutId());
+                // Get Original formLayout file from data directory
+
+                String xformOutput = "";
+                String directoryPath = Utils.getFilePath() + Utils.getCrfMediaPath(parentStudyBean.getOid(), crf.getOid(), formLayout.getOid());
+                File dir = new File(directoryPath);
+                File[] directoryListing = dir.listFiles();
+                if (directoryListing != null) {
+                    for (File child : directoryListing) {
+                        if ((child.getName().endsWith(QUERY_SUFFIX))) {
+                            xformOutput = new String(Files.readAllBytes(Paths.get(child.getPath())));
+                            break;
+                        }
+                    }
+                }
+                // Unmarshal original form layout form
+                Html html = xformParser.unMarshall(xformOutput);
+                Body body = html.getBody();
+                Head head = html.getHead();
+                Model model = head.getModel();
+
+                List<Bind> binds = model.getBind();
+                List<Instance> instances = model.getInstance();
+                binds = getBindElements(binds, item);
+                Itext itext = model.getItext();
+
+                UserControl itemUserControl = null;
+                UserControl itemCommentUserControl = null;
+
+                List<UserControl> userControls = body.getUsercontrol();
+                List<Group> groups = body.getGroup();
+                List<Repeat> repeats = body.getRepeat();
+
+                if (userControls != null) {
+                    itemUserControl = lookForUserControlInUserControl(userControls, item.getName());
+                    itemCommentUserControl = lookForUserControlInUserControl(userControls, item.getName() + COMMENT);
+                }
+                if (groups != null && itemUserControl == null) {
+                    itemUserControl = lookForUserControlInGroup(groups, item.getName(), null);
+                    itemCommentUserControl = lookForUserControlInGroup(groups, item.getName() + COMMENT, null);
+                }
+                if (repeats != null && itemUserControl == null) {
+                    itemUserControl = lookForUserControlInRepeat(repeats, item.getName(), null);
+                    itemCommentUserControl = lookForUserControlInRepeat(repeats, item.getName() + COMMENT, null);
+                }
+
+                if (itemUserControl != null) {
+                    itemUserControl.setRef("/form/group_layout/" + item.getName());
+                }
+                if (itemCommentUserControl != null) {
+                    itemCommentUserControl.setRef("/form/group_layout/" + item.getName() + COMMENT);
+                }
+                List<UserControl> uControls = new ArrayList<>();
+                uControls.add(itemUserControl);
+                uControls.add(itemCommentUserControl);
+
+                String xform = xformParser.marshall(buildSingleItemForm(item, uControls, binds, itext, instances, seb, ssb, sed, head.getTitle()));
+                xform = xform.substring(0, xform.indexOf("<meta>")) + "<group_layout>" + "<" + item.getName() + "/><" + item.getName() + COMMENT + " "
+                        + FS_QUERY_ATTRIBUTE + "=\"" + item.getName() + "\"/>" + "</group_layout>" + xform.substring(xform.indexOf("<meta>"));
+
+                String attribute = SINGLE_ITEM_FLAVOR + "[" + idb.getId() + "]";
+                context.setAttribute(attribute, xform);
+            }
+            StudyUserRoleBean currentRole = (StudyUserRoleBean) request.getSession().getAttribute("userRole");
+            Role role = currentRole.getRole();
 
             String formUrl = null;
             if (ecb.getId() > 0) {
-                formUrl = enketoUrlService.getEditUrl(contextHash, subjectContext, currentStudy.getOid(), null, null, QUERY_FLAVOR);
+                formUrl = enketoUrlService.getEditUrl(contextHash, subjectContext, currentStudy.getOid(), null, flavor, idb, role, EDIT_MODE);
             } else {
-                formUrl = enketoUrlService.getInitialDataEntryUrl(contextHash, subjectContext, currentStudy.getOid(), QUERY_FLAVOR);
+                String hash = formLayout.getXform();
+                formUrl = enketoUrlService.getInitialDataEntryUrl(contextHash, subjectContext, currentStudy.getOid(), flavor, role, EDIT_MODE, hash);
             }
-
-            request.setAttribute(EnketoFormServlet.FORM_URL, formUrl);
+            int hashIndex = formUrl.lastIndexOf("#");
+            String part1 = formUrl;
+            String part2 = "";
+            if (hashIndex != -1) {
+                part1 = formUrl.substring(0, hashIndex);
+                part2 = formUrl.substring(hashIndex);
+            }
+            request.setAttribute(EnketoFormServlet.FORM_URL1, part1);
+            request.setAttribute(EnketoFormServlet.FORM_URL2, part2);
+            request.setAttribute(ORIGINATING_PAGE, "ViewNotes?module=" + module);
+            if (!flavor.equals(SINGLE_ITEM_FLAVOR)) {
+                request.setAttribute(STUDYSUBJECTID, ssb.getLabel());
+            } else {
+                request.setAttribute(STUDYSUBJECTID, "");
+            }
         }
-
         return true;
-
     }
 
     /*
@@ -190,6 +369,7 @@ public class ResolveDiscrepancyServlet extends SecureController {
 
         FormProcessor fp = new FormProcessor(request);
         int noteId = fp.getInt(INPUT_NOTE_ID);
+        String flavor = fp.getString(FLAVOR);
         String module = (String) session.getAttribute("module");
 
         StudySubjectDAO studySubjectDAO = new StudySubjectDAO(sm.getDataSource());
@@ -254,7 +434,7 @@ public class ResolveDiscrepancyServlet extends SecureController {
         }
         // logger.info("set up pop up url: " + createNoteURL);
         // System.out.println("set up pop up url: " + createNoteURL);
-        boolean goNext = prepareRequestForResolution(request, sm.getDataSource(), currentStudy, discrepancyNoteBean, isCompleted);
+        boolean goNext = prepareRequestForResolution(request, sm.getDataSource(), currentStudy, discrepancyNoteBean, isCompleted, module, flavor);
 
         Page p = getPageForForwarding(discrepancyNoteBean, isCompleted);
 
@@ -271,7 +451,7 @@ public class ResolveDiscrepancyServlet extends SecureController {
                 p.setFileName(p.getFileName() + "?fromViewNotes=1");
             }
             String createNoteURL = CreateDiscrepancyNoteServlet.getAddChildURL(discrepancyNoteBean, ResolutionStatus.CLOSED, true);
-            setPopUpURL(createNoteURL);
+            setPopUpURL("");
         }
 
         if (!goNext) {
@@ -329,9 +509,6 @@ public class ResolveDiscrepancyServlet extends SecureController {
          * lost); so I had to comment it out if(subjectId != null){
          * session.removeAttribute("subjectId"); }
          */
-        if (module != null) {
-            session.removeAttribute("module");
-        }
 
         // BWP 11/03/2008 3029: redirect monitor user to ViewStudySubject if
         // they click "add note to thread" link>>
@@ -422,4 +599,232 @@ public class ResolveDiscrepancyServlet extends SecureController {
 
     }
 
+    private Html buildSingleItemForm(ItemBean item, List<UserControl> userControls, List<Bind> binds, Itext itext, List<Instance> instances, StudyEventBean seb,
+            StudySubjectBean ssb, StudyEventDefinitionBean sed, String title) {
+
+        Html html = new Html();
+        Head head = new Head();
+        Model model = new Model();
+        head.setTitle(resword.getString("view_query"));
+
+        // Set body
+        Body body = new Body();
+        Group group = new Group();
+        group.setRef("/form/group_layout");
+        Label metaLabel = new Label();
+        metaLabel.setLabel(resword.getString("subject_id") + ": " + ssb.getLabel() + "\n" + resword.getString("event_name") + ": " + sed.getName() + "\n"
+                + resword.getString("event_date") + ": " + formatDate(seb.getDateStarted()) + "\n" + resword.getString("form_title") + ": " + title + "\n\n ");
+        group.setLabel(metaLabel);
+        group.setUsercontrol(userControls);
+        List<Group> groups = new ArrayList<>();
+        groups.add(group);
+        body.setGroup(groups);
+        // Build Instance
+        Meta meta = new Meta();
+        meta.setInstanceID("uuid:" + item.getName());
+
+        Form form = new Form();
+        form.setMeta(meta);
+        form.setId("single_item");
+        form.setVersion("v1");
+
+        Instance instance = new Instance();
+        instance.setForm(form);
+        model.addInstance(instance);
+
+        // Set Binds
+        model.setBind(binds);
+
+        // Set or Build IText
+        List<String> refs = new ArrayList<>();
+        List<Item> items = null;
+        ItemSet itemSet = null;
+        String userControlRef = null;
+        for (UserControl userControl : userControls) {
+            if (userControl instanceof Select || userControl instanceof Select1) {
+                items = userControl.getItem();
+                itemSet = userControl.getItemSet();
+                if (items != null) {
+                    refs = addItemRefsToList(items, refs);
+                } else if (itemSet != null) {
+                    String instanceId = getInstanceId(itemSet);
+                    Instance inst = getInstanceByInstanceId(instanceId, instances);
+                    if (inst != null) {
+                        model.addInstance(inst);
+                        for (RootItem rootItem : inst.getRoot().getItem()) {
+                            refs.add(rootItem.getItextId());
+                        }
+                    }
+                }
+
+            }
+            if (userControl != null) {
+                userControlRef = userControl.getLabel().getRef();
+            }
+            if (userControlRef != null) {
+                refs.add(userControlRef.substring(10, userControlRef.length() - 2));
+            }
+        }
+        if (itext != null) {
+            List<Translation> translations = itext.getTranslation();
+            for (Translation translation : translations) {
+                List<Text> texts = translation.getText();
+
+                for (Iterator<Text> textIterator = texts.iterator(); textIterator.hasNext();) {
+                    Text text = textIterator.next();
+                    if (!refs.contains(text.getId())) {
+                        textIterator.remove();
+                    }
+                }
+            }
+            model.setItext(itext);
+        }
+
+        Instance usersInstance = new Instance();
+        usersInstance.setId("_users");
+        usersInstance.setSrc("jr://file-csv/users.xml");
+        model.addInstance(usersInstance);
+
+        // Assemble all
+        head.setModel(model);
+        html.setHead(head);
+        html.setBody(body);
+        return html;
+
+    }
+
+    private String getInstanceId(ItemSet itemSet) {
+        String instanceId = "";
+        String nodeSet = itemSet.getNodeSet();
+        if (nodeSet.startsWith("instance")) {
+            int begIndex = nodeSet.indexOf("('");
+            int endIndex = nodeSet.indexOf("')");
+            instanceId = nodeSet.substring(begIndex + 2, endIndex);
+            int index = nodeSet.indexOf("/root/item");
+            itemSet.setNodeSet(nodeSet.substring(0, index + 10));
+        }
+        return instanceId;
+    }
+
+    private Instance getInstanceByInstanceId(String instanceId, List<Instance> instances) {
+        Instance instance = null;
+        for (Instance inst : instances) {
+            if (inst.getId() != null && inst.getId().equals(instanceId)) {
+                instance = inst;
+                break;
+            }
+        }
+        return instance;
+    }
+
+    private List<String> addItemRefsToList(List<Item> items, List<String> refs) {
+        for (Item itm : items) {
+            Label itmLabel = itm.getLabel();
+            if (itmLabel.getRef() != null) {
+                String str = itmLabel.getRef();
+                refs.add(str.substring(10, str.length() - 2));
+            }
+        }
+        return refs;
+    }
+
+    private UserControl lookForUserControlInUserControl(List<UserControl> userControls, String itemName) {
+        UserControl userControl = null;
+        for (UserControl uControl : userControls) {
+            if (uControl.getRef().endsWith(itemName)) {
+                userControl = uControl;
+                break;
+            }
+        }
+        return userControl;
+    }
+
+    private UserControl lookForUserControlInGroup(List<Group> groups, String itemName, UserControl userControl) {
+        for (Group group : groups) {
+            if (group.getUsercontrol() != null && userControl == null) {
+                userControl = lookForUserControlInUserControl(group.getUsercontrol(), itemName);
+                if (userControl != null)
+                    break;
+            }
+            if (group.getGroup() != null && userControl == null) {
+                userControl = lookForUserControlInGroup(group.getGroup(), itemName, userControl);
+                if (userControl != null)
+                    break;
+            }
+            if (group.getRepeat() != null && userControl == null) {
+                userControl = lookForUserControlInRepeat(group.getRepeat(), itemName, userControl);
+                if (userControl != null)
+                    break;
+            }
+        }
+        return userControl;
+
+    }
+
+    private UserControl lookForUserControlInRepeat(List<Repeat> repeats, String itemName, UserControl userControl) {
+        for (Repeat repeat : repeats) {
+            if (repeat.getUsercontrol() != null && userControl == null) {
+                userControl = lookForUserControlInUserControl(repeat.getUsercontrol(), itemName);
+                if (userControl != null)
+                    break;
+            }
+            if (repeat.getGroup() != null && userControl == null) {
+                userControl = lookForUserControlInGroup(repeat.getGroup(), itemName, userControl);
+                if (userControl != null)
+                    break;
+            }
+            if (repeat.getRepeat() != null && userControl == null) {
+                userControl = lookForUserControlInRepeat(repeat.getRepeat(), itemName, userControl);
+                if (userControl != null)
+                    break;
+            }
+        }
+        return userControl;
+
+    }
+
+    private List<Bind> getBindElements(List<Bind> binds, ItemBean item) {
+        for (Iterator<Bind> bindIterator = binds.iterator(); bindIterator.hasNext();) {
+            Bind bind = bindIterator.next();
+            if (bind.getNodeSet().endsWith(item.getName())) {
+                setBindProperties(bind);
+                bind.setNodeSet("/form/group_layout/" + item.getName());
+            } else if (bind.getNodeSet().endsWith(item.getName() + COMMENT)) {
+                setBindProperties(bind);
+                bind.setNodeSet("/form/group_layout/" + item.getName() + COMMENT);
+                bind.setEnkFor("/form/group_layout/" + item.getName());
+            } else if (bind.getNodeSet().endsWith("meta/instanceID")) {
+                bind.setNodeSet("/form/meta/instanceID");
+            } else {
+                bindIterator.remove();
+            }
+        }
+        return binds;
+    }
+
+    private void setBindProperties(Bind bind) {
+        bind.setConstraint(null);
+        bind.setCalculate(null);
+        bind.setRequired(null);
+        bind.setRelevant(null);
+        bind.setConstraintMsg(null);
+        bind.setItemGroup(null);
+    }
+
+    private String formatDate(Date date) {
+        String format = resformat.getString("date_format_string");
+        SimpleDateFormat sdf = new SimpleDateFormat(format);
+        return sdf.format(date);
+    }
+
+    private StudyBean getParentStudy(String studyOid, DataSource ds) {
+        StudyDAO sdao = new StudyDAO(ds);
+        StudyBean study = (StudyBean) sdao.findByOid(studyOid);
+        if (study.getParentStudyId() == 0) {
+            return study;
+        } else {
+            StudyBean parentStudy = (StudyBean) sdao.findByPK(study.getParentStudyId());
+            return parentStudy;
+        }
+    }
 }

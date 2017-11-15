@@ -39,27 +39,27 @@ function notSelectAll() {
 <jsp:include page="../include/sideAlert.jsp"/>
 <!-- then instructions-->
 <tr id="sidebar_Instructions_open" style="display: none">
-		<td class="sidebar_tab">
+    <td class="sidebar_tab">
 
-		<a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><img src="images/sidebar_collapse.gif" border="0" align="right" hspace="10"></a>
+    <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><span class="icon icon-caret-down gray" border="0" align="right" hspace="10"></span></a>
 
-		<b><fmt:message key="instructions" bundle="${resword}"/></b>
+    <fmt:message key="instructions" bundle="${resword}"/>
 
-		<div class="sidebar_tab_content">
+    <div class="sidebar_tab_content">
 
-		</div>
+    </div>
 
-		</td>
+    </td>
 
-	</tr>
-	<tr id="sidebar_Instructions_closed" style="display: all">
-		<td class="sidebar_tab">
+  </tr>
+  <tr id="sidebar_Instructions_closed" style="display: all">
+    <td class="sidebar_tab">
 
-		<a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><img src="images/sidebar_expand.gif" border="0" align="right" hspace="10"></a>
+    <a href="javascript:leftnavExpand('sidebar_Instructions_open'); leftnavExpand('sidebar_Instructions_closed');"><span class="icon icon-caret-right gray" border="0" align="right" hspace="10"></span></a>
 
-		<b><fmt:message key="instructions" bundle="${resword}"/></b>
+    <fmt:message key="instructions" bundle="${resword}"/>
 
-		</td>
+    </td>
   </tr>
 
 <jsp:include page="../include/createDatasetSideInfo.jsp"/>
@@ -75,11 +75,11 @@ function notSelectAll() {
    <c:choose>
    <c:when test="${newDataset.id<=0}">
    <a href="javascript:openDocWindow('https://docs.openclinica.com/3.1/openclinica-user-guide/create-dataset')">
-   <img src="images/bt_Help_Manage.gif" border="0" alt="<fmt:message key="help" bundle="${resword}"/>" title="<fmt:message key="help" bundle="${resword}"/>"></a>
+   <span class="" border="0" alt="<fmt:message key="help" bundle="${resword}"/>" title="<fmt:message key="help" bundle="${resword}"/>"></a>
    </c:when>
    <c:otherwise>
    <a href="javascript:openDocWindow('https://docs.openclinica.com/3.1/openclinica-user-guide/edit-dataset')">
-   <img src="images/bt_Help_Manage.gif" border="0" alt="<fmt:message key="help" bundle="${resword}"/>" title="<fmt:message key="help" bundle="${resword}"/>"></a>
+   <span class="" border="0" alt="<fmt:message key="help" bundle="${resword}"/>" title="<fmt:message key="help" bundle="${resword}"/>"></a>
    </c:otherwise>
    </c:choose>
    : <c:out value="${newDataset.name}"/>
@@ -88,11 +88,9 @@ function notSelectAll() {
 </c:when>
 <c:otherwise>
 <h1>
- <span class="title_manage">
-   <fmt:message key="create_dataset" bundle="${resword}"/>: <fmt:message key="select_items" bundle="${resword}"/>
-   <a href="javascript:openDocWindow('https://docs.openclinica.com/3.1/openclinica-user-guide/create-dataset')">
-   <img src="images/bt_Help_Manage.gif" border="0" alt="<fmt:message key="help" bundle="${resword}"/>" title="<fmt:message key="help" bundle="${resword}"/>"></a>
- </span>
+  <span class="title_manage">
+     <fmt:message key="create_dataset" bundle="${resword}"/>
+  </span>
 </h1>
 </c:otherwise>
 </c:choose>
@@ -103,20 +101,21 @@ function notSelectAll() {
 </jsp:include>
 --%>
 
-<p><fmt:message key="please_select_one_CRF_from_the" bundle="${restext}"/> <b><fmt:message key="left_side_info_panel" bundle="${restext}"/></b><fmt:message key="select_items_in_CRF_include_dataset" bundle="${restext}"/></p>
-<p><fmt:message key="click_event_subject_attributes_specify" bundle="${restext}"/></p>
+
+<p><fmt:message key="Select_a_CRF_to_choose_individual" bundle="${resword}"/> </p>
+
 <table border="0" cellpadding="0" cellspacing="0">
   <tr>
     <td><img src="images/arrow_left.gif" alt="<fmt:message key="select_CRF_on_the_left" bundle="${restext}"/>" title="<fmt:message key="select_CRF_on_the_left" bundle="${restext}"/>"></td>
     <td>
       <div class="box_T"><div class="box_L"><div class="box_R"><div class="box_B"><div class="box_TL"><div class="box_TR"><div class="box_BL"><div class="box_BR">
-		<div class="textbox_center" align="center">
-			<span class="title_extract">
-				 <b><fmt:message key="use_task_pane_to_select_CRF" bundle="${restext}"/></b>
-			</span>
-		</div>
+    <div class="textbox_center" align="center">
+      <span class="title_extract">
+         <b><fmt:message key="use_task_pane_to_select_CRF" bundle="${restext}"/></b>
+      </span>
+    </div>
 
-	</div></div></div></div></div></div></div></div>
+  </div></div></div></div></div></div></div></div>
 
     </td>
   </tr>
@@ -155,7 +154,7 @@ function notSelectAll() {
 <table border="0" cellpadding="0" cellspacing="0" >
   <tr>
   <td><input type="checkbox" name="all" value="1"
-	onClick="javascript:selectAll();"> <fmt:message key="select_all_items" bundle="${resword}"/>&nbsp;&nbsp;&nbsp;</td>
+  onClick="javascript:selectAll();"> <fmt:message key="select_all_items" bundle="${resword}"/>&nbsp;&nbsp;&nbsp;</td>
    <td><input type="submit" name="save" value="<fmt:message key="save_and_add_more_items" bundle="${resword}"/>" class="button_xlong"/></td>
    <td><input type="submit" name="saveContinue" value="<fmt:message key="save_and_define_scope" bundle="${resword}"/>" class="button_xlong"/></td>
    <td><input type="button" onclick="confirmCancel('ViewDatasets');"  name="cancel" value="   <fmt:message key="cancel" bundle="${resword}"/>   " class="button_medium"/></td>
@@ -310,16 +309,16 @@ function notSelectAll() {
    <%-- REQUIRED --%>
 
    <td class="table_cell">
-   	<c:forEach var="meta" items="${item.itemMetas}" varStatus="status">
+    <c:forEach var="meta" items="${item.itemMetas}" varStatus="status">
      <c:choose>
 
-      	<c:when test="${!status.last}"></c:when>
-      	<c:when test="${meta.required}">
-        	Yes
-      	</c:when>
-      	<c:otherwise>
-        	No
-      	</c:otherwise>
+        <c:when test="${!status.last}"></c:when>
+        <c:when test="${meta.required}">
+          Yes
+        </c:when>
+        <c:otherwise>
+          No
+        </c:otherwise>
 
     </c:choose>
 
@@ -391,7 +390,5 @@ function notSelectAll() {
 </form>
 </c:if>
 
-<c:import url="../include/workflow.jsp">
-   <c:param name="module" value="extract"/>
-</c:import>
+
 <jsp:include page="../include/footer.jsp"/>

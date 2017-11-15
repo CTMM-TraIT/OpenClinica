@@ -59,13 +59,12 @@ public class StudyAuditLogTableFactory extends AbstractTableFactory {
     @Override
     protected void configureColumns(TableFacade tableFacade, Locale locale) {
         tableFacade.setColumnProperties("studySubject.label", "studySubject.secondaryLabel", "studySubject.oid", "subject.dateOfBirth",
-                "subject.uniqueIdentifier", "studySubject.owner", "studySubject.status", "actions");
+                 "studySubject.owner", "studySubject.status", "actions");
         Row row = tableFacade.getTable().getRow();
         configureColumn(row.getColumn("studySubject.label"), resword.getString("study_subject_ID"), null, null);
         configureColumn(row.getColumn("studySubject.secondaryLabel"), resword.getString("secondary_subject_ID"), null, null);
         configureColumn(row.getColumn("studySubject.oid"), resword.getString("study_subject_oid"), null, null);
         configureColumn(row.getColumn("subject.dateOfBirth"), resword.getString("date_of_birth"), new DateCellEditor(getDateFormat()), null);
-        configureColumn(row.getColumn("subject.uniqueIdentifier"), resword.getString("person_ID"), null, null);
         configureColumn(row.getColumn("studySubject.owner"), resword.getString("created_by"), new OwnerCellEditor(), null, true, false);
         configureColumn(row.getColumn("studySubject.status"), resword.getString("status"), new StatusCellEditor(), new StatusDroplistFilterEditor());
         String actionsHeader = resword.getString("actions") + "&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;";
@@ -231,10 +230,9 @@ public class StudyAuditLogTableFactory extends AbstractTableFactory {
             Integer studySubjectId = studySubjectBean.getId();
             if (studySubjectBean != null) {
                 StringBuilder url = new StringBuilder();
-                url
-                        .append("<a onmouseup=\"javascript:setImage('bt_View1','images/bt_View.gif');\" onmousedown=\"javascript:setImage('bt_View1','images/bt_View_d.gif');\" href=\"javascript:openDocWindow('ViewStudySubjectAuditLog?id=");
+                url.append("<a onmouseup=\"javascript:setImage('bt_View1','icon icon-search');\" onmousedown=\"javascript:setImage('bt_View1','icon icon-search');\" href=\"javascript:openDocWindow('ViewStudySubjectAuditLog?id=");
                 url.append(studySubjectId);
-                url.append("')\"><img hspace=\"6\" border=\"0\" align=\"left\" title=\"View\" alt=\"View\" src=\"images/bt_View.gif\" name=\"bt_View1\"/></a>");
+                url.append("')\"><span hspace=\"6\" border=\"0\" align=\"left\" title=\"View\" alt=\"View\" class=\"icon icon-search\" name=\"bt_View1\"/></a>");
                 value = url.toString();
             }
             return value;

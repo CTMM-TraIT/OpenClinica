@@ -4,16 +4,19 @@ import java.util.HashMap;
 
 import javax.servlet.ServletContext;
 
+import org.akaza.openclinica.bean.core.Role;
 import org.akaza.openclinica.bean.managestudy.StudyBean;
 import org.akaza.openclinica.bean.service.StudyParameterValueBean;
+import org.akaza.openclinica.bean.submit.ItemDataBean;
 import org.akaza.openclinica.dao.login.UserAccountDAO;
 import org.akaza.openclinica.dao.managestudy.StudyDAO;
 import org.akaza.openclinica.dao.service.StudyParameterValueDAO;
+import org.akaza.openclinica.domain.datamap.FormLayout;
 import org.akaza.openclinica.service.crfdata.EnketoUrlService;
 import org.akaza.openclinica.service.crfdata.xform.PFormCacheSubjectContextEntry;
 import org.akaza.openclinica.service.pmanage.ParticipantPortalRegistrar;
 import org.akaza.openclinica.web.pform.PFormCache;
-import org.apache.commons.dbcp.BasicDataSource;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,13 +86,17 @@ public class EditFormController {
         PFormCache cache = PFormCache.getInstance(context);
         HashMap<String, String> subjectContextMap = cache.getSubjectContext(formContext);
         PFormCacheSubjectContextEntry subjectContext = new PFormCacheSubjectContextEntry();
-        subjectContext.setStudyEventDefinitionId(Integer.valueOf(subjectContextMap.get("studyEventDefinitionID")));
+        subjectContext.setStudyEventDefinitionId(subjectContextMap.get("studyEventDefinitionID"));
         subjectContext.setFormLayoutOid(subjectContextMap.get("formLayoutOID"));
 
         subjectContext.setStudySubjectOid(subjectContextMap.get("studySubjectOID"));
-        subjectContext.setOrdinal(Integer.valueOf(subjectContextMap.get("studyEventOrdinal")));
+        subjectContext.setOrdinal(subjectContextMap.get("studyEventOrdinal"));
 
-        editURL = urlService.getEditUrl(formContext, subjectContext, studyOID, null, null, NO_FLAVOR);
+        FormLayout formLayout = null;
+        ItemDataBean idb = null;
+        Role role = null;
+        String mode = null;
+        editURL = urlService.getEditUrl(formContext, subjectContext, studyOID, formLayout, NO_FLAVOR, idb, role, mode);
         logger.debug("Generating Enketo edit url for form: " + editURL);
 
         return new ResponseEntity<String>(editURL, org.springframework.http.HttpStatus.ACCEPTED);

@@ -76,7 +76,7 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  */
 public class ViewStudySubjectServlet extends SecureController {
     // The study subject has an existing discrepancy note related to their
-    // unique identifier; this
+    // person id; this
     // value will be saved as a request attribute
     public final static String HAS_UNIQUE_ID_NOTE = "hasUniqueIDNote";
     // The study subject has an existing discrepancy note related to their date
@@ -311,8 +311,7 @@ public class ViewStudySubjectServlet extends SecureController {
             // date, desc
             ArrayList allEventRows = DisplayStudyEventRow.generateRowsFromBeans(displayEvents);
 
-            String[] columns = { resword.getString("event") + " (" + resword.getString("occurrence_number") + ")", resword.getString("start_date1"),
-                    resword.getString("location"), resword.getString("status"), resword.getString("actions"), resword.getString("CRFs_atrib") };
+            String[] columns = { resword.getString("event") + " (" + resword.getString("occurrence_number") + ")", resword.getString("start_date1"), resword.getString("status"), resword.getString("event_actions"), resword.getString("CRFs") };
             table.setColumns(new ArrayList(Arrays.asList(columns)));
             table.hideColumnLink(4);
             table.hideColumnLink(5);

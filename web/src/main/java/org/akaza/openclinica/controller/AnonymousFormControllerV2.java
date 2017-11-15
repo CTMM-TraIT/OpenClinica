@@ -24,7 +24,7 @@ import org.akaza.openclinica.i18n.util.ResourceBundleProvider;
 import org.akaza.openclinica.service.managestudy.EventDefinitionCrfTagService;
 import org.akaza.openclinica.service.pmanage.ParticipantPortalRegistrar;
 import org.akaza.openclinica.web.pform.PFormCache;
-import org.apache.commons.dbcp.BasicDataSource;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,7 +147,7 @@ public class AnonymousFormControllerV2 {
     private String createAnonymousEnketoUrl(String studyOID, FormLayoutBean formLayout, EventDefinitionCRFBean edcBean, boolean isOffline) throws Exception {
         StudyBean parentStudyBean = getParentStudy(studyOID);
         PFormCache cache = PFormCache.getInstance(context);
-        String enketoURL = cache.getPFormURL(parentStudyBean.getOid(), formLayout.getOid(), isOffline);
+        String enketoURL = cache.getPFormURL(parentStudyBean.getOid(), formLayout.getOid(), isOffline, null);
         String contextHash = cache.putAnonymousFormContext(studyOID, formLayout.getOid(), edcBean.getStudyEventDefinitionId());
         String url = null;
         if (isOffline)
