@@ -49,7 +49,7 @@
         <center>
         <div>
 		<p id="environmentName">
-                ${trait.environment}
+            <%= System.getProperty("trait.environment.message") %>
          </p>
         </div>
         <table id="logoBar">
@@ -126,7 +126,9 @@
                         </div>
                     <input type="submit" name="submit" value="<fmt:message key='login' bundle='${resword}'/>" class="loginbutton" />
                     <a href="#" id="requestPassword"> <fmt:message key="forgot_password" bundle="${resword}"/></a>
-                        <p><fmt:message key="message.login.extra.notification" bundle="${restext}"/></p>
+                        <p>
+                            <%= System.getProperty("trait.failed.login.warning.message") %>
+                        </p>
                    </form>
                    <br/><jsp:include page="../login-include/login-alertbox.jsp"/>
                    <%-- <a href="<c:url value="/RequestPassword"/>"> <fmt:message key="forgot_password" bundle="${resword}"/></a> --%>
