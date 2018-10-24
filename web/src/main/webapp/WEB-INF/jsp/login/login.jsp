@@ -57,22 +57,22 @@
                         <tr>
                                 <td id="imageTraIT">
                                     <div id="imageTraITContainer">
-                                        <a href="http://www.ctmm-trait.nl">
+                                        <a href="http://www.health-ri.nl">
                                                 <img src="<c:url value='/images/TraIT_logo.png'/>" alt="trait-logo"/>
                                         </a>
                                         <p>WELCOME TO OPENCLINICA</p>
                                     </div>
                                 </td>
                                 <td id="welcomeTextTraIT">
-                                        <p>This electronic CRF application is supported by the CTMM TraIT project and
+                                        <p>This electronic CRF application is supported by the Health-RI TraIT project and
                                             offered for use in Dutch investigator initiated clinical or biomedical research
                                             projects and international partners in these projects.</p>
                                         <p>
-                                            Please contact us via the <a href="${pageContext.request.contextPath}/Contact">TraIT servicedesk</a> for more information; tel. 088-1167500
+                                            Please contact us via the <a href="${pageContext.request.contextPath}/Contact">Health-RI servicedesk</a> for more information; tel. 088-1167500
                                         </p>
                                         <p>
                                             We support a broad spectrum of applications for use in biomedical and clinical research.
-                                            Please visit our website for more information:<br/><a href="http://www.ctmm-trait.nl/trait-tools">http://www.ctmm-trait.nl/trait-tools</a>
+                                            Please visit our website for more information:<br/><a href="https://trait.health-ri.nl/trait-tools">https://trait.health-ri.nl/trait-tools</a>
                                         </p>
                                 </td>
                         </tr>
