@@ -30,6 +30,8 @@
 		<!-- Library Versions -->
 		<spring.version>3.0.5.RELEASE</spring.version>
 		<db.test>localhost</db.test>
+
+		<trait.version>vOCDI_2.0.0</trait.version>
 	</properties>
 	<profiles>
 		<profile>

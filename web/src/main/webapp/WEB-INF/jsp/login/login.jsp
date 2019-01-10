@@ -26,6 +26,7 @@
 <%-- <script type="text/JavaScript" language="JavaScript" src="includes/global_functions_javascript2.js"></script> --%>
 <script type="text/JavaScript" language="JavaScript" src="<c:url value='/includes/global_functions_javascript.js'/>"></script>
 <script type="text/JavaScript" language="JavaScript" src="<c:url value='/includes/ua-parser.min.js'/>"></script>
+<link rel="stylesheet" href="<c:url value='/includes/trait.css'/>" type="text/css"/>
 </head>
 
 <fmt:setBundle basename="org.akaza.openclinica.i18n.notes" var="restext"/>
@@ -39,24 +40,46 @@
 <%--</c:choose>--%>
 
 <body class="login_BG" onLoad="document.getElementById('username').focus();">
-    <div class="login_BG">
+    <div>
     <center>
+	<div class="headerBar">
+                <p class="headerText">
+                TraIT - Translational Research IT infrastructure
+                </p>
+        </div>
+        <center>
+        <div>
+		<p id="environmentName">
+            <%= System.getProperty("trait.environment.message") %>
+         </p>
+        </div>
+        <table id="logoBar">
+                <tbody>
+                        <tr>
+                                <td id="imageTraIT">
+                                    <div id="imageTraITContainer">
+                                        <a href="http://www.health-ri.nl">
+                                                <img src="<c:url value='/images/TraIT_logo.png'/>" alt="trait-logo"/>
+                                        </a>
+                                        <p>WELCOME TO OPENCLINICA</p>
+                                    </div>
+                                </td>
+                                <td id="welcomeTextTraIT">
+                                        <p>This electronic CRF application is supported by the Health-RI TraIT project and
+                                            offered for use in Dutch investigator initiated clinical or biomedical research
+                                            projects and international partners in these projects.</p>
+                                        <p>
+                                            Please contact us via the <a href="${pageContext.request.contextPath}/Contact">Health-RI servicedesk</a> for more information; tel. 088-1167500
+                                        </p>
+                                        <p>
+                                            We support a broad spectrum of applications for use in biomedical and clinical research.
+                                            Please visit our website for more information:<br/><a href="https://trait.health-ri.nl/trait-tools">https://trait.health-ri.nl/trait-tools</a>
+                                        </p>
+                                </td>
+                        </tr>
+                </tbody>
+        </table>
 
-    <!-- OpenClinica logo -->
-	<%String ua = request.getHeader( "User-Agent" );
-	String temp = "";
-	String iev = "";
-	if( ua != null && ua.indexOf( "MSIE" ) != -1 ) {
-		temp = ua.substring(ua.indexOf( "MSIE" ),ua.length());
-		iev = temp.substring(4, temp.indexOf(";"));
-		iev = iev.trim();
-	}
-	if(iev.length() > 1 && Double.valueOf(iev)<7) {%>
-	<div ID="OClogoIE6">&nbsp;</div>
-	<%} else {%>
-    <div ID="OClogo">&nbsp;</div>
-  	<%}%>
-    <!-- end OpenClinica logo -->
         <table width="720 px">
 
     <script type="text/javascript">
@@ -100,6 +123,9 @@
                         </div>
                     <input type="submit" name="submit" value="<fmt:message key='login' bundle='${resword}'/>" class="loginbutton" />
                     <a href="#" id="requestPassword"> <fmt:message key="forgot_password" bundle="${resword}"/></a>
+                        <p>
+                            <%= System.getProperty("trait.failed.login.warning.message") %>
+                        </p>
                    </form>
                    <br/><jsp:include page="../login-include/login-alertbox.jsp"/>
                    <%-- <a href="<c:url value="/RequestPassword"/>"> <fmt:message key="forgot_password" bundle="${resword}"/></a> --%>
@@ -150,4 +176,5 @@
 
 <!-- Footer -->
 <!-- End Main Content Area -->
+<!-- The TraIT version ID: OCDI_v_2.0.0 -->
 <jsp:include page="../login-include/login-footer.jsp"/>

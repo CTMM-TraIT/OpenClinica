@@ -7,34 +7,29 @@
  */
 package org.akaza.openclinica.ws;
 
+import org.akaza.openclinica.bean.admin.CRFBean;
 import org.akaza.openclinica.bean.core.Status;
 import org.akaza.openclinica.bean.login.StudyUserRoleBean;
 import org.akaza.openclinica.bean.login.UserAccountBean;
-import org.akaza.openclinica.bean.managestudy.StudyBean;
-import org.akaza.openclinica.bean.managestudy.StudyEventBean;
-import org.akaza.openclinica.bean.managestudy.StudyEventDefinitionBean;
-import org.akaza.openclinica.bean.managestudy.StudySubjectBean;
-import org.akaza.openclinica.bean.managestudy.SubjectTransferBean;
+import org.akaza.openclinica.bean.managestudy.*;
+import org.akaza.openclinica.bean.submit.CRFVersionBean;
+import org.akaza.openclinica.bean.submit.DisplayEventCRFBean;
+import org.akaza.openclinica.bean.submit.EventCRFBean;
 import org.akaza.openclinica.bean.submit.SubjectBean;
+import org.akaza.openclinica.dao.admin.CRFDAO;
 import org.akaza.openclinica.dao.login.UserAccountDAO;
 import org.akaza.openclinica.dao.managestudy.StudyDAO;
-import org.akaza.openclinica.dao.managestudy.StudyEventDAO;
 import org.akaza.openclinica.dao.managestudy.StudyEventDefinitionDAO;
 import org.akaza.openclinica.dao.managestudy.StudySubjectDAO;
+import org.akaza.openclinica.dao.submit.CRFVersionDAO;
 import org.akaza.openclinica.dao.submit.SubjectDAO;
 import org.akaza.openclinica.exception.OpenClinicaSystemException;
 import org.akaza.openclinica.i18n.util.ResourceBundleProvider;
+import org.akaza.openclinica.service.managestudy.StudySubjectService;
 import org.akaza.openclinica.service.subject.SubjectServiceInterface;
 import org.akaza.openclinica.ws.bean.SubjectStudyDefinitionBean;
 import org.akaza.openclinica.ws.validator.SubjectTransferValidator;
-import org.openclinica.ws.beans.EventType;
-import org.openclinica.ws.beans.EventsType;
-import org.openclinica.ws.beans.GenderType;
-import org.openclinica.ws.beans.ListStudySubjectsInStudyType;
-import org.openclinica.ws.beans.StudyRefType;
-import org.openclinica.ws.beans.StudySubjectWithEventsType;
-import org.openclinica.ws.beans.StudySubjectsType;
-import org.openclinica.ws.beans.SubjectType;
+import org.openclinica.ws.beans.*;
 import org.openclinica.ws.studysubject.v1.ListAllByStudyResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,15 +47,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.List;
-import java.util.Locale;
-
 import javax.sql.DataSource;
 import javax.xml.bind.JAXBElement;
 import javax.xml.datatype.DatatypeConstants;
@@ -70,6 +56,9 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Source;
 import javax.xml.transform.dom.DOMSource;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * @author Krikor Krumlian
@@ -82,6 +71,8 @@ public class StudySubjectEndpoint {
     private final String NAMESPACE_URI_V1 = "http://openclinica.org/ws/studySubject/v1";
     private String dateFormat;
 
+
+    private final StudySubjectService studySubjectService;
     private final SubjectServiceInterface subjectService;
     private final DataSource dataSource;
     private final MessageSource messages;
@@ -96,8 +87,9 @@ public class StudySubjectEndpoint {
      * @param subjectService
      * @param dataSource
      */
-    public StudySubjectEndpoint(SubjectServiceInterface subjectService, DataSource dataSource, MessageSource messages) {
+    public StudySubjectEndpoint(SubjectServiceInterface subjectService, StudySubjectService studySubjectService, DataSource dataSource, MessageSource messages) {
         this.subjectService = subjectService;
+        this.studySubjectService = studySubjectService;
         this.dataSource = dataSource;
         this.messages = messages;
         this.locale = new Locale("en_US");
@@ -174,7 +166,7 @@ public class StudySubjectEndpoint {
     /**
        * Use this method to find if studysubject exists by study/site/subject lable.
      * 
-     * @param requestElement
+     * @param subject
      * @return studySubjectOID
      * @throws Exception
   */
@@ -183,7 +175,6 @@ public class StudySubjectEndpoint {
     		) throws Exception {
     	ResourceBundleProvider.updateLocale(locale);
         Element subjectElement = (Element) subject.item(0);
-       // Element studyElement = (Element) study.item(0);
         SubjectStudyDefinitionBean subjectStudyBean = unMarshallToSubjectStudy(subjectElement);//,studyElement);
 
         DataBinder dataBinder = new DataBinder((subjectStudyBean));
@@ -219,6 +210,14 @@ public class StudySubjectEndpoint {
         response.setResult(message);
         StudySubjectsType studySubjectsType = new StudySubjectsType();
         response.setStudySubjects(studySubjectsType);
+        // 100 is a large value to avoid any map reallocation activity. The map contains the site
+        // specific StudyRefTypes to be able to output the site's identifier
+        Map<Integer, StudyRefType> studyIDRefMap = new HashMap<>(100);
+        studyIDRefMap.put(study.getId(), studyRef);
+
+        UserAccountBean userAccountBean = getUserAccount();
+        StudyUserRoleBean studyUserRoleBean = getUserAccountDao().findRoleByUserNameAndStudyId(getUserAccount().getName(), study.getId());
+
         List<StudySubjectBean> studySubjects = this.subjectService.getStudySubject(study);
         for (StudySubjectBean studySubjectBean : studySubjects) {
             StudySubjectWithEventsType studySubjectType = new StudySubjectWithEventsType();
@@ -238,9 +237,22 @@ public class StudySubjectEndpoint {
             	subjectType.setDateOfBirth(getXMLGregorianCalendarDate(subjectBean.getDateOfBirth()));
             }
             studySubjectType.setSubject(subjectType);
-            // studySubjectType.setStudyRef(studyRef);
+            int studyIDSubject = studySubjectBean.getStudyId();
+            StudyRefType studyRefOutput = studyIDRefMap.get(studyIDSubject);
+            if (studyRefOutput == null) {
+                StudyBean siteStudy = (StudyBean) getStudyDao().findByPK(studyIDSubject);
+                studyRefOutput = new StudyRefType();
+                studyRefOutput.setIdentifier(study.getIdentifier());
+                SiteRefType siteRefType = new SiteRefType();
+                siteRefType.setIdentifier(siteStudy.getIdentifier());
+                studyRefOutput.setSiteRef(siteRefType);
+                studyIDRefMap.put(studyIDSubject, studyRefOutput);
+            }
+
+            studySubjectType.setStudyRef(studyRefOutput);
+
             logger.debug(studySubjectBean.getLabel());
-            studySubjectType.setEvents(getEvents(studySubjectBean));
+            studySubjectType.setEvents(retrieveEvents(studySubjectBean, userAccountBean, studyUserRoleBean));
             studySubjectsType.getStudySubject().add(studySubjectType);
 
         }
@@ -254,35 +266,64 @@ public class StudySubjectEndpoint {
      * @return EventsType
      * @throws Exception
      */
-    private EventsType getEvents(StudySubjectBean studySubject) throws Exception {
-        StudyEventDAO eventDao = new StudyEventDAO(dataSource);
+    private EventsType retrieveEvents(StudySubjectBean studySubject, UserAccountBean userAccountBean, StudyUserRoleBean studyUserRoleBean) throws Exception {
         StudyEventDefinitionDAO studyEventDefinitionDao = new StudyEventDefinitionDAO(dataSource);
         EventsType eventsType = new EventsType();
-        List<StudyEventBean> events = eventDao.findAllByStudySubject(studySubject);
-        StudyEventDefinitionBean eb=null;
-        for (StudyEventBean studyEventBean : events) {
-        	 StudyEventDefinitionBean sed = (StudyEventDefinitionBean) studyEventDefinitionDao.findByPK(studyEventBean.getStudyEventDefinitionId());
-        	 studyEventBean.setStudyEventDefinition(sed);
-            
-             EventType eventType = new EventType();
-            eventType.setEventDefinitionOID(studyEventBean.getStudyEventDefinition().getOid());
-            eventType.setLocation(studyEventBean.getLocation());
+        List<DisplayStudyEventBean> displayStudyEventBeanList =
+                studySubjectService.getDisplayStudyEventsForStudySubject(studySubject, userAccountBean, studyUserRoleBean);
+
+        for (DisplayStudyEventBean displayStudyEventBean : displayStudyEventBeanList) {
+            StudyEventBean studyEventBean = displayStudyEventBean.getStudyEvent();
+        	StudyEventDefinitionBean sed = (StudyEventDefinitionBean) studyEventDefinitionDao.findByPK(studyEventBean.getStudyEventDefinitionId());
+        	studyEventBean.setStudyEventDefinition(sed);
+
+
+            EventResponseType eventResponseType = new EventResponseType();
+            eventResponseType.setEventDefinitionOID(studyEventBean.getStudyEventDefinition().getOid());
+            eventResponseType.setStatus(studyEventBean.getStatus().getName());
+            eventResponseType.setOccurrence(studyEventBean.getSampleOrdinal() + "");
+            eventResponseType.setSubjectEventStatus(studyEventBean.getSubjectEventStatus().getName());
+            eventResponseType.setLocation(studyEventBean.getLocation());
             if ( studyEventBean.getDateStarted() != null){
-            	eventType.setStartDate(getXMLGregorianCalendarDate(studyEventBean.getDateStarted()));
-            	eventType.setStartTime(getXMLGregorianCalendarTime(studyEventBean.getDateStarted()));
+            	eventResponseType.setStartDate(getXMLGregorianCalendarDate(studyEventBean.getDateStarted()));
+            	eventResponseType.setStartTime(getXMLGregorianCalendarTime(studyEventBean.getDateStarted()));
             }
             if ( studyEventBean.getDateEnded() != null){
-	            eventType.setEndDate(getXMLGregorianCalendarDate(studyEventBean.getDateEnded()));
-	            eventType.setEndTime(getXMLGregorianCalendarTime(studyEventBean.getDateEnded()));
+	            eventResponseType.setEndDate(getXMLGregorianCalendarDate(studyEventBean.getDateEnded()));
+	            eventResponseType.setEndTime(getXMLGregorianCalendarTime(studyEventBean.getDateEnded()));
             }
+            EventCrfInformationList eventCrfInformationList = createEventCrfInformationList(displayStudyEventBean);
+            eventResponseType.getEventCrfInformation().add(eventCrfInformationList);
             
-            
-            eventsType.getEvent().add(eventType);
-            logger.debug(eventType.getEventDefinitionOID()+" "+eventType.getStartDate());
+            eventsType.getEvent().add(eventResponseType);
+            logger.debug(eventResponseType.getEventDefinitionOID()+" "+eventResponseType.getStartDate());
             
         }
         return eventsType;
     }
+
+    private EventCrfInformationList createEventCrfInformationList(DisplayStudyEventBean displayStudyEventBean) {
+        EventCrfInformationList eventCrfInformationList = new EventCrfInformationList ();
+        CRFVersionDAO crfVersionDAO = new CRFVersionDAO(dataSource);
+        CRFDAO crfdao = new CRFDAO(dataSource);
+        ArrayList<DisplayEventCRFBean> displayEventCRFBeanList = displayStudyEventBean.getDisplayEventCRFs();
+        for (DisplayEventCRFBean displayEventCRFBean : displayEventCRFBeanList) {
+            EventCRFBean eventCRFBean = displayEventCRFBean.getEventCRF();
+            CRFVersionBean crfVersionBean = (CRFVersionBean) crfVersionDAO.findByPK(eventCRFBean.getCRFVersionId());
+            CRFBean crf = crfdao.findByVersionId(crfVersionBean.getId());
+
+            EventCrfType eventCrfType = new EventCrfType();
+            eventCrfType.setStatus(displayEventCRFBean.getStage().getName());
+            eventCrfType.setName(crf.getName());
+            eventCrfType.setVersion(crfVersionBean.getName());
+            eventCrfType.setOid(crfVersionBean.getOid());
+            eventCrfInformationList.getEventCrf().add(eventCrfType);
+        }
+
+        return eventCrfInformationList;
+    }
+
+
 
     /**
      * Validate the listStudySubjectsInStudy request.
@@ -383,7 +424,7 @@ public class StudySubjectEndpoint {
     /**
      * Process createStudySubject request by creating SubjectStudyDefinitionBean from received payload.
      * 
-     * @param subjectElement
+     * @param subjectStudyElement
      * @return SubjectTransferBean
      * @throws ParseException
      */
