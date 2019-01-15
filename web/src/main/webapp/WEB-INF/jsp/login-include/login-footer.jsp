@@ -46,8 +46,8 @@
                     </c:choose>
 					</div>
 
-					<div  id="version"></div><fmt:message key="Version_release" bundle="${licensing}"/> </div>
-
+					<div  id="version"><fmt:message key="Version_release" bundle="${licensing}"/> </div>
+                    <div><fmt:message key="trait_version" bundle="${resword}"/></div>
                 </td>
             </tr>
         </table>

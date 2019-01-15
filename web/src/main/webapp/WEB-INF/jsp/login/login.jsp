@@ -176,5 +176,5 @@
 
 <!-- Footer -->
 <!-- End Main Content Area -->
-<!-- The TraIT version ID: OCDI_v_2.0.0 -->
+
 <jsp:include page="../login-include/login-footer.jsp"/>
