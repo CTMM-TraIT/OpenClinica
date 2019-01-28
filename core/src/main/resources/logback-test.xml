@@ -525,6 +525,12 @@ Specific logger for all the traffic between OpenClinica and the Trusted Third Pa
 				</then>
 			</if>			
 	</logger>
+
+
+	<logger additivity="false" name="org.akaza.openclinica.service.BulkEmailSenderService">
+		<level value="DEBUG" />
+	</logger>
+
 	<!-- application exceptions -->	
 	<logger additivity="false" name="org.akaza.openclinica.exception">
 		<level value="${logLevel}" />
