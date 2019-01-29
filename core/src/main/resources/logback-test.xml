@@ -7,9 +7,8 @@ core project. All appenders added only log to the local log and disregard the SY
 
 All additions are marked with the comment string 'TRAIT-ADDITION' 
 
--->  
-  
-  <property resource="datainfo.properties" />
+-->
+	<contextListener class="org.akaza.openclinica.log.LoggerStartupListener"/>
   
   <!-- APPENDERS -->
   <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -525,12 +524,6 @@ Specific logger for all the traffic between OpenClinica and the Trusted Third Pa
 				</then>
 			</if>			
 	</logger>
-
-
-	<logger additivity="false" name="org.akaza.openclinica.service.BulkEmailSenderService">
-		<level value="DEBUG" />
-	</logger>
-
 	<!-- application exceptions -->	
 	<logger additivity="false" name="org.akaza.openclinica.exception">
 		<level value="${logLevel}" />
