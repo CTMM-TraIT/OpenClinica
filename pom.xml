@@ -30,7 +30,7 @@
 		<!-- Library Versions -->
 		<spring.version>3.0.5.RELEASE</spring.version>
 
-		<trait.version>vOCDI_2.0.0</trait.version>
+		<trait.version>v3.6_TraIT_2</trait.version>
 	</properties>
 	<profiles>
 		<profile>
