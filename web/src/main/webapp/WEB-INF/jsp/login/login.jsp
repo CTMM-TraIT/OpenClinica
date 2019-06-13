@@ -73,7 +73,7 @@
                                         </p>
                                         <p>
                                             We support a broad spectrum of applications for use in biomedical and clinical research.
-                                            Please visit our website for more information:<br/><a href="https://www.health-ri.nl/services" target="_blank">https://www.health-ri.nl/services</a>
+                                            Please visit our website for more information:<br/><a href="https://www.health-ri.nl/services-tools" target="_blank">https://www.health-ri.nl/services-tools</a>
                                         </p>
                                 </td>
                         </tr>

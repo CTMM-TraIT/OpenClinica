@@ -65,7 +65,7 @@
 
 <!-- Logo -->
 
-<div class="logo"><img src="images/Logo.gif"></div>
+<div class="logo"><img src="images/Logo.png"></div>
 
 <!-- Main Navigation -->
 

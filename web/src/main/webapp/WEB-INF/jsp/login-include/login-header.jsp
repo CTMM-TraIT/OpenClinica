@@ -79,7 +79,7 @@ onload="TabsForwardByNum(<c:out value="${tabId}"/>);<jsp:include page="../includ
                     <td valign="top">
                         <div class="disabled_header"><img src="images/spacer.gif"/></div>
                         <!-- Logo -->
-                        <div class="logo"><img src="images/Logo.gif"></div>
+                        <div class="logo"><img src="images/Logo.png"></div>
                         <!-- Main Navigation -->
                         <%-- <jsp:include page="../include/navBar.jsp"/> --%>
 
