@@ -83,6 +83,7 @@ public class CreateUserAccountServlet extends SecureController {
 
     @Override
     protected void processRequest() throws Exception {
+        request.setAttribute("requestSchema", "public");
         FormProcessor fp = new FormProcessor(request);
 
         StudyDAO sdao = new StudyDAO(sm.getDataSource());
@@ -209,6 +210,7 @@ public class CreateUserAccountServlet extends SecureController {
             v.addValidation(INPUT_LAST_NAME, Validator.LENGTH_NUMERIC_COMPARISON, NumericComparisonOperator.LESS_THAN_OR_EQUAL_TO, 50);
 
             v.addValidation(INPUT_EMAIL, Validator.NO_BLANKS);
+            v.addValidation(INPUT_EMAIL, Validator.NO_LEADING_OR_TRAILING_SPACES);
             v.addValidation(INPUT_EMAIL, Validator.LENGTH_NUMERIC_COMPARISON, NumericComparisonOperator.LESS_THAN_OR_EQUAL_TO, 120);
             v.addValidation(INPUT_EMAIL, Validator.IS_A_EMAIL);
 
