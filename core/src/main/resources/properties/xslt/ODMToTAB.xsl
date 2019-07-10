@@ -61,6 +61,8 @@
 		select="//odm:SubjectData/@OpenClinica:UniqueIdentifier" />
 	<xsl:variable name="dobExist"
 		select="//odm:SubjectData/@OpenClinica:DateOfBirth" />
+        <xsl:variable name="yearOfBirthExist"
+		select="//odm:SubjectData/@OpenClinica:YearOfBirth" />
 	<xsl:variable name="subjectStatusExist" select="//odm:SubjectData/@OpenClinica:Status" />
 	<xsl:variable name="subjectSecondaryIdExist" select="//odm:SubjectData/@OpenClinica:SecondaryID"/>
 	
@@ -141,7 +143,7 @@
 			<xsl:with-param name="DateTime" select="/odm:ODM/@CreationDateTime" />
 		</xsl:call-template>
 		<xsl:text>&#xa;</xsl:text>
-		<xsl:text>Participants: </xsl:text>
+		<xsl:text>Subjects: </xsl:text>
 		<xsl:value-of select="$delimiter" />
 		<xsl:value-of select="$subject_count" />
 		<xsl:text>&#xa;</xsl:text>
@@ -168,7 +170,7 @@
 		<!--<xsl:value-of select="$eol"/>--><!-- Subject Data, item 
 			data etc -->
 		<!--<xsl:text>SubjectId</xsl:text>-->
-		<xsl:text>Participant ID</xsl:text>
+		<xsl:text>Study Subject ID</xsl:text>
 		<xsl:value-of select="$sep"/>
 		<xsl:text>Protocol ID</xsl:text>
 		<xsl:value-of select="$sep"/>
@@ -181,7 +183,7 @@
 			<xsl:value-of select="$delimiter" />
 		</xsl:if>		
 		<xsl:if test="$subjectStatusExist">
-			<xsl:text>Participant Status</xsl:text>
+			<xsl:text>Subject Status</xsl:text>
 			<xsl:value-of select="$delimiter" />
 		</xsl:if>
 		<xsl:if test="$sexExist">
@@ -192,7 +194,11 @@
 			<xsl:text>Date of Birth</xsl:text>
 			<xsl:value-of select="$delimiter" />
 		</xsl:if>
-		
+                <xsl:if test="$yearOfBirthExist">
+			<xsl:text>Year of Birth</xsl:text>
+			<xsl:value-of select="$delimiter" />
+		</xsl:if>
+
 		<!--	<xsl:apply-templates
 			select="/odm:ODM/odm:ClinicalData/odm:SubjectData/odm:StudyEventData"
 			mode="studyEventInfo" />-->
@@ -508,6 +514,10 @@
 		</xsl:if>
 		<xsl:if test="$dobExist">
 			<xsl:value-of select="@OpenClinica:DateOfBirth"/>
+			<xsl:value-of select="$delimiter" />
+		</xsl:if>
+                <xsl:if test="$yearOfBirthExist">
+			<xsl:value-of select="@OpenClinica:YearOfBirth"/>
 			<xsl:value-of select="$delimiter" />
 		</xsl:if>
 	<!--<xsl:apply-templates mode="studyEventInfoData" select="odm:StudyEventData"/>-->
