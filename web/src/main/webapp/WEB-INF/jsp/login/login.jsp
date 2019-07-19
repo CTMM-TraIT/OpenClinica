@@ -65,7 +65,7 @@
                                     </div>
                                 </td>
                                 <td id="welcomeTextTraIT">
-                                        <p>This electronic CRD application is a Health-RI service offered for use
+                                        <p>This electronic CRF application is a Health-RI service offered for use
                                             in Dutch investigator initiated clinical or biomedical research
                                             projects and international partners in these projects.</p>
                                         <p>
