@@ -58,7 +58,7 @@
                         <tr>
                                 <td id="imageTraIT">
                                     <div id="imageTraITContainer">
-                                        <a href="http://www.health-ri.nl">
+                                        <a href="https://www.health-ri.nl">
                                                 <img src="<c:url value='/images/TraIT_Health_RI_logo.svg'/>" alt="trait-logo"/>
                                         </a>
                                         <p>WELCOME TO OPENCLINICA</p>
